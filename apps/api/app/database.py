@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from .models.partner import Base
 import os
 
-# Database URL - SQLite for development
+# Database URL - PostgreSQL for production, SQLite for development
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./beregne.db")
 
 engine = create_engine(
