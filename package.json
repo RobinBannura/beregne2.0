@@ -1,0 +1,49 @@
+{
+  "name": "beregne2.0",
+  "version": "2.0.0",
+  "description": "AI-powered calculator platform for Norway",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:api": "cd apps/api && python -m uvicorn app.main:app --reload",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:widget": "cd apps/embed && npm run dev",
+    "build": "turbo run build",
+    "build:api": "cd apps/api && echo 'API build complete'",
+    "build:web": "cd apps/web && npm run build",
+    "build:widget": "cd apps/embed && npm run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "turbo": "^1.10.16",
+    "prettier": "^3.0.0",
+    "eslint": "^8.50.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RobinBannura/beregne2.0.git"
+  },
+  "keywords": [
+    "calculator",
+    "ai",
+    "norway",
+    "loans",
+    "energy",
+    "fastapi",
+    "nextjs",
+    "widget"
+  ],
+  "author": "Robin Bannura",
+  "license": "MIT"
+}
