@@ -28,7 +28,13 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        "https://beregne2-0-marketing.vercel.app",  # Vercel deployment
+        "https://beregne.no",  # Custom domain (når du setter det opp)
+        "https://www.beregne.no",
+        "https://beregne20-production.up.railway.app"  # Railway backend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

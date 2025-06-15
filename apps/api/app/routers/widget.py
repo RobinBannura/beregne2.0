@@ -6,7 +6,7 @@ from ..models.partner import Partner
 
 router = APIRouter(prefix="/widget", tags=["widget"])
 
-@router.get("/{partner_id}")
+@router.get("/{partner_id}", response_class=HTMLResponse)
 async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
     """Generer HTML for embeddbar widget for spesifikk partner"""
     
