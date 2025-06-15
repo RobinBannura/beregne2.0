@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -23,7 +25,7 @@ export default function HomePage() {
               <Link href="#demo" className="text-gray-600 hover:text-gray-900">
                 Demo
               </Link>
-              <Link href="http://127.0.0.1:8000/dashboard" target="_blank">
+              <Link href={`${API_URL}/dashboard`} target="_blank">
                 <Button variant="outline">Dashboard</Button>
               </Link>
             </nav>
@@ -46,7 +48,7 @@ export default function HomePage() {
             </p>
             <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
               <div className="rounded-md shadow">
-                <Link href="http://127.0.0.1:8000/dashboard" target="_blank">
+                <Link href={`${API_URL}/dashboard`} target="_blank">
                   <Button size="lg" className="w-full">
                     🚀 Kom i gang gratis
                   </Button>
@@ -197,7 +199,7 @@ export default function HomePage() {
               </div>
               <div className="p-6">
                 <iframe 
-                  src="http://127.0.0.1:8000/widget/househacker"
+                  src={`${API_URL}/widget/househacker`}
                   width="100%"
                   height="600"
                   className="border-0 rounded-lg"
@@ -291,7 +293,7 @@ export default function HomePage() {
                   </div>
                   
                   <div className="pt-4">
-                    <Link href="http://127.0.0.1:8000/dashboard" target="_blank">
+                    <Link href={`${API_URL}/dashboard`} target="_blank">
                       <Button className="w-full">
                         Åpne Partner Dashboard
                       </Button>
