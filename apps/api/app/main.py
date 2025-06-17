@@ -88,7 +88,7 @@ async def startup_event():
                 name="househacker AS",
                 domain="househacker.no",
                 brand_name="househacker",
-                brand_color="#e11d48",
+                brand_color="#1f2937",
                 logo_url="https://househacker.no/logo.png",
                 enabled_agents=["renovation"],
                 agent_display_name="Oppussingsrådgiver",

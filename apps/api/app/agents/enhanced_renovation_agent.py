@@ -728,26 +728,26 @@ class EnhancedRenovationAgent(BaseAgent):
         if project_type == "bad_komplett" or "bad" in query.lower():
             response += """
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                <h4>🚿 Baderom (komplett renovering)</h4>
+                <h4>Baderom (komplett renovering)</h4>
                 <ul>
-                    <li><strong>Enkel oppussing:</strong> 150.000 - 300.000 NOK</li>
-                    <li><strong>Standard renovering:</strong> 300.000 - 500.000 NOK</li>
-                    <li><strong>Totalrenovering/luksus:</strong> 500.000 - 800.000+ NOK</li>
+                    <li><strong>Lite bad (2-3 m²):</strong> 200.000 - 350.000 NOK</li>
+                    <li><strong>Standard bad (4-6 m²):</strong> 350.000 - 600.000 NOK</li>
+                    <li><strong>Stort bad (7-10 m²):</strong> 600.000 - 900.000+ NOK</li>
                 </ul>
-                <p><small>Avhenger av størrelse, materialvalg og hvor mye som må rives.</small></p>
+                <p><small>Inkluderer riving, VVS, elektro, fliser, wc og dusjløsning.</small></p>
             </div>
             """
         
         if project_type == "kjøkken_komplett" or "kjøkken" in query.lower():
             response += """
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                <h4>🍳 Kjøkken (komplett renovering)</h4>
+                <h4>Kjøkken (komplett renovering)</h4>
                 <ul>
                     <li><strong>IKEA-løsning:</strong> 200.000 - 400.000 NOK</li>
                     <li><strong>Midt-segment:</strong> 400.000 - 700.000 NOK</li>
-                    <li><strong>Snekkerløsning/luksus:</strong> 700.000 - 1.200.000+ NOK</li>
+                    <li><strong>Snekkerløsning:</strong> 700.000 - 1.200.000+ NOK</li>
                 </ul>
-                <p><small>Inkluderer skap, benkeplate, hvitevarer og installasjon.</small></p>
+                <p><small>Prisen avhenger av: skap, benkeplate, hvitevarer, VVS/elektro-endringer og monteringskostnader (20-30k).</small></p>
             </div>
             """
         

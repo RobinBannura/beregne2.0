@@ -51,54 +51,22 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         }}
         
         .widget-header {{
-            background: linear-gradient(135deg, {partner.brand_color} 0%, #c53030 100%);
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
             color: white;
-            padding: 24px 20px;
+            padding: 20px;
             text-align: center;
-            position: relative;
-        }}
-        
-        .widget-header::before {{
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
         }}
         
         .widget-header h1 {{
-            font-size: 22px;
+            font-size: 20px;
             margin-bottom: 8px;
-            font-weight: 700;
-            position: relative;
-            z-index: 1;
+            font-weight: 600;
         }}
         
         .widget-header p {{
-            opacity: 0.95;
-            font-size: 15px;
-            position: relative;
-            z-index: 1;
-            margin-bottom: 12px;
-        }}
-        
-        .househacker-badge {{
-            display: inline-flex;
-            align-items: center;
-            background: rgba(255,255,255,0.2);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            position: relative;
-            z-index: 1;
-        }}
-        
-        .househacker-badge::before {{
-            content: '🏠';
-            margin-right: 6px;
+            opacity: 0.9;
+            font-size: 14px;
+            margin-bottom: 0;
         }}
         
         .chat-container {{
@@ -123,19 +91,19 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         }}
         
         .message.user {{
-            background: {partner.brand_color};
+            background: #374151;
             color: white;
             margin-left: auto;
         }}
         
         .message.bot {{
-            background: {partner.widget_theme == 'dark' and '#3a3a3a' or '#f8fafc'};
-            color: {partner.widget_theme == 'dark' and '#ffffff' or '#1a1a1a'};
-            border-left: 4px solid {partner.brand_color};
+            background: #f8fafc;
+            color: #1a1a1a;
+            border-left: 4px solid #374151;
         }}
         
         .message.bot h2, .message.bot h3, .message.bot h4 {{
-            color: {partner.brand_color};
+            color: #1f2937;
             margin-top: 1em;
             margin-bottom: 0.5em;
         }}
@@ -147,12 +115,12 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         }}
         
         .message.bot th {{
-            background: {partner.brand_color};
+            background: #374151;
             color: white;
         }}
         
         .message.bot button {{
-            background: {partner.brand_color};
+            background: #374151;
             color: white;
             border: none;
             padding: 12px 24px;
@@ -163,7 +131,7 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         }}
         
         .message.bot button:hover {{
-            background: #c53030;
+            background: #1f2937;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }}
@@ -185,7 +153,7 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         
         .input-container button {{
             padding: 12px 24px;
-            background: {partner.brand_color};
+            background: #374151;
             color: white;
             border: none;
             border-radius: 8px;
@@ -195,7 +163,7 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         }}
         
         .input-container button:hover {{
-            opacity: 0.9;
+            background: #1f2937;
         }}
         
         .input-container button:disabled {{
@@ -220,43 +188,26 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
         }}
         
         .example:hover {{
-            border-color: {partner.brand_color};
+            border-color: #374151;
         }}
         
         .branding {{
             text-align: center;
-            padding: 16px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            border-top: 1px solid {partner.widget_theme == 'dark' and '#3a3a3a' or '#e5e7eb'};
-        }}
-        
-        .branding-content {{
-            font-size: 13px;
+            padding: 12px;
+            background: #f8fafc;
+            border-top: 1px solid #e5e7eb;
+            font-size: 11px;
             color: #64748b;
-            margin-bottom: 10px;
+            line-height: 1.4;
         }}
         
-        .cta-button {{
-            display: inline-flex;
-            align-items: center;
-            background: {partner.brand_color};
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
+        .branding a {{
+            color: #374151;
             text-decoration: none;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.2s;
         }}
         
-        .cta-button:hover {{
-            background: #c53030;
-            transform: translateY(-1px);
-        }}
-        
-        .cta-button::before {{
-            content: '🏠';
-            margin-right: 6px;
+        .branding a:hover {{
+            text-decoration: underline;
         }}
         
         .loading {{
@@ -273,32 +224,31 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
 <body>
     <div class="widget-container">
         <div class="widget-header">
-            <h1>💰 Oppussings&shy;kalkulator</h1>
-            <p>Få realistiske kostnadsestimater for ditt oppussingsprosjekt</p>
-            <div class="househacker-badge">Powered by househacker</div>
+            <h1>househacker</h1>
+            <p>Kostnadskalkulator for oppussing</p>
         </div>
         
         <div class="chat-container">
             <div class="messages" id="messages">
                 <div class="message bot">
-                    👋 Hei! Jeg hjelper deg med kostnadsestimater for oppussingsprosjekter i Oslo-området. 
+                    Hei! Jeg hjelper deg med kostnadsestimater for oppussingsprosjekter. 
                     <br><br>
-                    Få realistiske priser på materialer, arbeid og totalkostnader - og la househacker hjelpe deg med gjennomføringen! 🏠
+                    Spør om materialer, arbeidskostnader eller få pristilbud på komplette renoveringer.
                 </div>
             </div>
             
             <div class="examples">
-                <div class="example" onclick="askQuestion('Jeg skal totalrenovere badet - 15 m²')">
-                    🚿 Badrenovering 15 m²
+                <div class="example" onclick="askQuestion('Komplett badrenovering 5 m²')">
+                    Badrenovering 5 m²
                 </div>
-                <div class="example" onclick="askQuestion('Komplett kjøkken Oslo - 20 m²')">
-                    🍳 Kjøkken 20 m²
+                <div class="example" onclick="askQuestion('Maling av stue 35 m²')">
+                    Maling stue
                 </div>
-                <div class="example" onclick="askQuestion('Hvor mye maling trenger jeg til 40 m²?')">
-                    🎨 Maling 40 m²
+                <div class="example" onclick="askQuestion('Hvor mye koster det å sparke og male vegger?')">
+                    Helsparkling
                 </div>
-                <div class="example" onclick="askQuestion('Jeg skal pusse opp!')">
-                    🏠 Generell oppussing
+                <div class="example" onclick="askQuestion('Jeg skal skifte gulv i hele leiligheten')">
+                    Gulvlegging
                 </div>
             </div>
             
@@ -306,24 +256,21 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
                 <input 
                     type="text" 
                     id="messageInput" 
-                    placeholder="F.eks: Jeg skal pusse opp badet - 12 m²"
+                    placeholder="F.eks: Maling av stue 35 m²"
                     onkeypress="handleKeyPress(event)"
                 >
                 <button onclick="sendMessage()" id="sendButton">Send</button>
             </div>
             
             <div class="loading" id="loading">
-                <p>⏳ Beregner...</p>
+                <p>Beregner...</p>
             </div>
         </div>
         
         <div class="branding">
-            <div class="branding-content">
-                Trenger du hjelp med oppussingen? househacker kobler deg med kvalifiserte håndverkere.
-            </div>
-            <a href="https://househacker.no" target="_blank" class="cta-button">
-                Besøk househacker.no
-            </a>
+            Kostnadsestimater er veiledende og kan avvike fra faktiske priser. 
+            <br>
+            Ta kontakt ved spørsmål. Drevet av <a href="https://beregne.no" target="_blank">beregne.no</a>
         </div>
     </div>
 
