@@ -225,30 +225,30 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
     <div class="widget-container">
         <div class="widget-header">
             <h1>househacker</h1>
-            <p>Kostnadskalkulator for oppussing</p>
+            <p>Din assistent for oppussingsprosjekter</p>
         </div>
         
         <div class="chat-container">
             <div class="messages" id="messages">
                 <div class="message bot">
-                    Hei! Jeg hjelper deg med kostnadsestimater for oppussingsprosjekter. 
+                    Hei! Jeg er din househacker-assistent. 
                     <br><br>
-                    Spør om materialer, arbeidskostnader eller få pristilbud på komplette renoveringer.
+                    Har du spørsmål innen oppussing? Eller ønsker du å registrere et prosjekt slik at vi kan hjelpe deg i gang?
                 </div>
             </div>
             
             <div class="examples">
-                <div class="example" onclick="askQuestion('Komplett badrenovering 5 m²')">
-                    Badrenovering 5 m²
+                <div class="example" onclick="askQuestion('Jeg vil registrere et oppussingsprosjekt')">
+                    Registrer prosjekt
                 </div>
-                <div class="example" onclick="askQuestion('Maling av stue 35 m²')">
-                    Maling stue
+                <div class="example" onclick="askQuestion('Hva koster badrenovering?')">
+                    Kostnader bad
                 </div>
-                <div class="example" onclick="askQuestion('Hvor mye koster det å sparke og male vegger?')">
-                    Helsparkling
+                <div class="example" onclick="askQuestion('Hvordan fungerer househacker?')">
+                    Om househacker
                 </div>
-                <div class="example" onclick="askQuestion('Jeg skal skifte gulv i hele leiligheten')">
-                    Gulvlegging
+                <div class="example" onclick="askQuestion('Jeg trenger hjelp med kjøkkenrenovering')">
+                    Hjelp med kjøkken
                 </div>
             </div>
             
@@ -256,7 +256,7 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
                 <input 
                     type="text" 
                     id="messageInput" 
-                    placeholder="F.eks: Maling av stue 35 m²"
+                    placeholder="F.eks: Jeg vil registrere et badrenovering-prosjekt"
                     onkeypress="handleKeyPress(event)"
                 >
                 <button onclick="sendMessage()" id="sendButton">Send</button>

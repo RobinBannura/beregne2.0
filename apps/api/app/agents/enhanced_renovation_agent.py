@@ -8,41 +8,41 @@ from .base_agent import BaseAgent
 
 class EnhancedRenovationAgent(BaseAgent):
     """
-    Avansert oppussingsagent med:
-    - Komplett byggekostnadskalkulator
-    - Arbeidstid og lønn beregninger
-    - Lead-generering til Monday/CRM
-    - Sanntids materialpriser
+    househacker-assistent som hjelper kunder med:
+    - Oppussingsrådgivning og kostnadsestimater
+    - Profesjonelle pristilbud og prosjektregistrering
+    - Lead-generering og kundeoppfølging
+    - Faktabaserte svar innen oppussing
     """
     
     def __init__(self):
         super().__init__()
         self.agent_name = "renovation"
         
-        # Realistiske Oslo-priser 2025 (oppdatert basert på markedsdata)
+        # Profesjonelle Oslo-priser 2025 (håndverkerpriser, ikke DIY)
         self.MATERIALS = {
             "maling": {
                 "dekning_per_liter": 8,  # Mer realistisk dekning
-                "pris_per_liter": 450,   # Oslo-priser for kvalitetsmaling
+                "pris_per_liter": 550,   # Profesjonelle malingsmerker
                 "lag": 2,
-                "arbeidstid_per_m2": 0.5,  # timer per m² (inkludert prep)
-                "timepris": 750,  # Oslo-timepriser for malere
+                "arbeidstid_per_m2": 0.6,  # timer per m² (inkludert prep)
+                "timepris": 850,  # Profesjonelle malerpriser Oslo
                 "prep_faktor": 1.3  # Ekstra tid for preparering
             },
             "fliser": {
                 "spill_faktor": 0.15,  # Mer realistisk spill
-                "pris_per_m2": 800,    # Oslo-priser for gode fliser
+                "pris_per_m2": 950,    # Profesjonelle fliser og lim
                 "fugemasse_per_m2": 0.8,
-                "arbeidstid_per_m2": 2.5,  # Mer realistisk tid
-                "timepris": 950,  # Oslo-timepriser for flisleggere
-                "underlag_kostnad": 200  # Per m² for underlag
+                "arbeidstid_per_m2": 2.8,  # Inkludert kvalitetsarbeid
+                "timepris": 1100,  # Profesjonelle flisleggerpriser Oslo
+                "underlag_kostnad": 250  # Per m² for underlag
             },
             "laminat": {
                 "spill_faktor": 0.1,
-                "pris_per_m2": 450,    # Oslo-priser for kvalitetslaminat
-                "arbeidstid_per_m2": 1.2,
-                "timepris": 700,
-                "underlag_kostnad": 150  # Per m² for underlag
+                "pris_per_m2": 550,    # Profesjonelt kvalitetslaminat
+                "arbeidstid_per_m2": 1.4,
+                "timepris": 800,  # Profesjonelle gulvleggerpriser
+                "underlag_kostnad": 180  # Per m² for underlag
             },
             "gips": {
                 "kg_per_m2": 1.5,
@@ -52,20 +52,20 @@ class EnhancedRenovationAgent(BaseAgent):
                 "spackling_kostnad": 100  # Per m² for spackling
             },
             "rør": {
-                "pris_per_meter": 180,  # Oslo-priser for rør
-                "pris_per_m2": 1200,    # Realistisk per m² for komplette rørarbeider
+                "pris_per_meter": 220,  # Profesjonelle rør og fittings
+                "pris_per_m2": 1400,    # Profesjonelle rørarbeider per m²
                 "fittings_faktor": 0.4,
-                "arbeidstid_per_m2": 3.5,  # Mer realistisk tid
-                "timepris": 1200,  # Oslo-timepriser for rørleggere
-                "armatur_kostnad": 8000  # Gjennomsnittlig for bad
+                "arbeidstid_per_m2": 4.0,  # Grundig arbeid
+                "timepris": 1300,  # Profesjonelle rørleggerpriser
+                "armatur_kostnad": 10000  # Kvalitetsarmaturer
             },
             "elektrisk": {
-                "pris_per_punkt": 1200,  # Oslo-priser per uttak/bryter
-                "pris_per_m2": 1500,     # Realistisk per m² for elektro
+                "pris_per_punkt": 1400,  # Profesjonelle installasjoner
+                "pris_per_m2": 1700,     # Profesjonelle elektroarbeider
                 "material_faktor": 0.3,
-                "arbeidstid_per_m2": 2.0,
-                "timepris": 1350,  # Oslo-timepriser for elektrikere
-                "sikringsskap_oppgradering": 15000  # Fast kostnad
+                "arbeidstid_per_m2": 2.2,
+                "timepris": 1450,  # Profesjonelle elektrikerpriser
+                "sikringsskap_oppgradering": 18000  # Fast kostnad
             },
             "benkeplate": {
                 "pris_per_m2": 2500,    # Oslo-priser for kvarts/granitt
@@ -138,6 +138,10 @@ class EnhancedRenovationAgent(BaseAgent):
                 result = await self._provide_detailed_breakdown(analysis, query)
             elif analysis["type"] == "quote_request":
                 result = await self._handle_quote_request(analysis, query)
+            elif analysis["type"] == "project_registration":
+                result = await self._handle_project_registration(analysis, query)
+            elif analysis["type"] == "about_househacker":
+                result = await self._explain_househacker_services(analysis, query)
             elif analysis["type"] == "needs_clarification" or analysis["needs_clarification"]:
                 result = await self._ask_clarifying_questions(analysis, query)
             else:
@@ -468,6 +472,7 @@ class EnhancedRenovationAgent(BaseAgent):
             "kostnad", "koster", "pris", "priser", "budsjett", "estimat",
             "kalkulator", "beregn", "hvor mye", "material", "utstyr",
             "tilbud", "pristilbud", "anbud", "offert", "konsultasjon",
+            "registrere", "prosjekt", "befaring", "househacker",
             
             # Håndverkere og tjenester
             "håndverker", "tømrer", "maler", "elektriker", "rørlegger",
@@ -505,18 +510,18 @@ class EnhancedRenovationAgent(BaseAgent):
         """Returnerer informasjon om hva denne agenten kan gjøre"""
         return {
             "name": self.agent_name,
-            "description": "Avansert oppussings- og byggekostnadskalkulator med CRM-integrasjon",
+            "description": "househacker-assistent for oppussingsprosjekter og prosjektregistrering",
             "keywords": [
-                "oppussing", "renovering", "materialkalkulator", "byggekostnader",
-                "arbeidstid", "timepris", "prosjektledelse", "håndverkere", "CRM"
+                "househacker", "oppussing", "renovering", "prosjektregistrering", "tilbud",
+                "håndverkere", "befaring", "kvalitetssikring", "prosjektkoordinering"
             ],
             "features": [
-                "Komplett materialkalkulator",
-                "Arbeidstid og lønnsberegninger", 
-                "Sanntids materialpriser",
-                "Lead-generering for store prosjekter",
-                "Monday.com CRM integrasjon",
-                "Detaljerte kostnadsoverslag"
+                "Prosjektregistrering og oppfølging",
+                "Profesjonelle kostnadsestimater",
+                "Kobling med kvalifiserte håndverkere", 
+                "Gratis befaring og rådgivning",
+                "Tilbudssammenligning",
+                "Kvalitetssikring av arbeid"
             ]
         }
 
@@ -549,6 +554,10 @@ class EnhancedRenovationAgent(BaseAgent):
             analysis_type = "detailed_breakdown"
         elif any(phrase in query_lower for phrase in ['tilbud', 'gi meg et tilbud', 'kan du gi', 'trenger tilbud', 'få tilbud', 'hjelp med', 'på dette']):
             analysis_type = "quote_request"
+        elif any(phrase in query_lower for phrase in ['registrere prosjekt', 'registrere et prosjekt', 'jeg vil registrere', 'melde fra om prosjekt']):
+            analysis_type = "project_registration"
+        elif any(phrase in query_lower for phrase in ['hvordan fungerer', 'om househacker', 'hva er househacker', 'hvem er househacker']):
+            analysis_type = "about_househacker"
         elif len(query_lower.split()) <= 5 and any(phrase in query_lower for phrase in ['pusse opp', 'renovere', 'oppussing']):
             # Korte, generelle spørsmål som "jeg skal pusse opp"
             analysis_type = "needs_clarification"
@@ -802,6 +811,95 @@ class EnhancedRenovationAgent(BaseAgent):
             "agent_used": self.agent_name,
             "total_cost": 0,  # Ikke en kalkulator, så ingen kostnad
             "show_lead_capture": True
+        }
+
+    async def _handle_project_registration(self, analysis: Dict, query: str) -> Dict[str, Any]:
+        """Håndterer prosjektregistrering direkte"""
+        response = f"""
+<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
+    <h2 style="color: #1f2937; margin-bottom: 15px;">🏗️ Registrer ditt oppussingsprosjekt</h2>
+    
+    <p style="margin-bottom: 20px;">Fantastisk at du vil registrere et prosjekt! Som din househacker-assistent hjelper jeg deg å komme i gang.</p>
+    
+    <div style="background: #10b981; color: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: white; margin-bottom: 15px;">✅ Dette får du når du registrerer:</h3>
+        <ul style="margin-bottom: 20px;">
+            <li>🎯 Personlig oppfølging av ditt prosjekt</li>
+            <li>🏗️ Inntil 3 tilbud fra kvalifiserte håndverkere</li>
+            <li>📋 Gratis befaring og rådgivning</li>
+            <li>💰 Prissammenligning og forhandling</li>
+            <li>🔍 Kvalitetssikring gjennom hele prosessen</li>
+            <li>📞 Direkte kontakt med prosjektkoordinator</li>
+        </ul>
+        
+        <div style="text-align: center;">
+            <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+                    style="background: white; color: #10b981; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 10px;">
+                🚀 Registrer prosjekt nå
+            </button>
+        </div>
+    </div>
+    
+    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <h4 style="color: #1976d2; margin-bottom: 10px;">💡 Hvordan fungerer det?</h4>
+        <ol style="margin: 0; padding-left: 20px;">
+            <li>Du registrerer prosjektet ditt</li>
+            <li>Vi organiserer befaring med kvalifiserte håndverkere</li>
+            <li>Du får inntil 3 tilbud å sammenligne</li>
+            <li>Vi hjelper deg velge og koordinerer arbeidet</li>
+        </ol>
+    </div>
+</div>"""
+        
+        return {
+            "response": response,
+            "agent_used": self.agent_name,
+            "show_lead_capture": True
+        }
+
+    async def _explain_househacker_services(self, analysis: Dict, query: str) -> Dict[str, Any]:
+        """Forklarer househacker sine tjenester"""
+        response = f"""
+<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
+    <h2 style="color: #1f2937; margin-bottom: 15px;">🏡 Om househacker</h2>
+    
+    <p style="margin-bottom: 20px;">househacker er din partner for oppussingsprosjekter. Vi gjør oppussing enkelt og trygt!</p>
+    
+    <div style="background: #ffffff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #374151; margin-bottom: 15px;">🎯 Hva vi gjør:</h3>
+        <ul style="margin-bottom: 20px;">
+            <li>🔗 <strong>Kobler deg med kvalifiserte håndverkere</strong> - Kun sertifiserte fagfolk</li>
+            <li>📋 <strong>Prosjektkoordinering</strong> - Vi følger opp fra start til slutt</li>
+            <li>💰 <strong>Prissammenligning</strong> - Du får alltid konkurransedyktige priser</li>
+            <li>🔍 <strong>Kvalitetssikring</strong> - Vi sjekker at arbeidet holder høy standard</li>
+            <li>📞 <strong>Personlig oppfølging</strong> - Dedikert kontaktperson gjennom hele prosessen</li>
+        </ul>
+    </div>
+    
+    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <h4 style="color: #92400e; margin-bottom: 10px;">⚡ Hvorfor velge househacker?</h4>
+        <p style="margin: 0; font-size: 14px;">
+            Vi har hjulpet hundrevis av kunder med oppussing i Oslo-området. Vårt nettverk av håndverkere er nøye utvalgt, 
+            og alle prosjekter kommer med garanti. Du sparer tid, penger og stress!
+        </p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="askQuestion('Jeg vil registrere et oppussingsprosjekt')" 
+                style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 0 10px;">
+            🏗️ Registrer prosjekt
+        </button>
+        
+        <button onclick="askQuestion('Hva koster badrenovering?')" 
+                style="background: transparent; color: #1f2937; border: 2px solid #1f2937; padding: 13px 25px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 10px;">
+            💰 Se kostnader
+        </button>
+    </div>
+</div>"""
+        
+        return {
+            "response": response,
+            "agent_used": self.agent_name
         }
 
     async def _compare_suppliers(self, analysis: Dict, query: str) -> Dict[str, Any]:

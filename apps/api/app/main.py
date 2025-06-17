@@ -91,8 +91,8 @@ async def startup_event():
                 brand_color="#1f2937",
                 logo_url="https://househacker.no/logo.png",
                 enabled_agents=["renovation"],
-                agent_display_name="Oppussingsrådgiver",
-                welcome_message="Hei! Jeg er househacker sin oppussingsrådgiver. Jeg kan hjelpe deg beregne materialer og kostnader for ditt oppussingsprosjekt.",
+                agent_display_name="househacker-assistent",
+                welcome_message="Hei! Jeg er din househacker-assistent. Har du spørsmål innen oppussing? Eller ønsker du å registrere et prosjekt slik at vi kan hjelpe deg i gang?",
                 widget_position="bottom-right",
                 widget_theme="light",
                 show_branding=True
