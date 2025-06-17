@@ -9,12 +9,27 @@ from datetime import datetime
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
 class LeadData(BaseModel):
+    # Prosjektdetaljer
     project_type: str
     estimated_cost: float
     area: str
     partner_id: str = "unknown"
-    contact_info: Dict[str, str] = {}
     additional_notes: str = ""
+    
+    # Kontaktinformasjon (GDPR-compliant)
+    name: str
+    phone: str
+    email: str
+    address: str
+    
+    # Personvern
+    privacy_consent: bool = False
+    marketing_consent: bool = False
+    
+    # Prosjektdetaljer
+    project_description: str = ""
+    timeline: str = ""  # "umiddelbart", "1-3 måneder", "3-6 måneder", etc.
+    budget_range: str = ""  # "under 200k", "200-500k", "500k-1M", "over 1M"
 
 class MondayIntegration:
     """Monday.com CRM integrasjon for leads"""
@@ -41,9 +56,20 @@ class MondayIntegration:
         }
         """
         
-        # Forenklet kolonnverdier - kun tekst kolonne til å starte med
+        # Detaljerte kolonnverdier for Monday.com
         column_values = {
-            "text": f"Kostnad: {lead.estimated_cost:,.0f} NOK | Areal: {lead.area}m² | Type: {lead.project_type} | Partner: {lead.partner_id}"
+            "text": f"{lead.name}",  # Navn
+            "text4": f"{lead.phone}",  # Telefon
+            "text8": f"{lead.email}",  # E-post  
+            "text6": f"{lead.address}",  # Adresse
+            "numbers": str(int(lead.estimated_cost)),  # Estimert kostnad
+            "text7": f"{lead.area}m² {lead.project_type}",  # Prosjektdetaljer
+            "text9": f"{lead.project_description}",  # Beskrivelse
+            "status": {"label": "Ny lead"},  # Status
+            "timeline": {"label": lead.timeline or "Ikke oppgitt"},  # Tidsramme
+            "text2": f"Budget: {lead.budget_range} | Partner: {lead.partner_id}",  # Ekstra info
+            "checkbox": {"checked": lead.privacy_consent},  # Personvernssamtykke
+            "date4": datetime.now().strftime("%Y-%m-%d")  # Opprettet dato
         }
         
         variables = {
@@ -112,7 +138,21 @@ class GoogleSheetsIntegration:
 
 @router.post("/")
 async def create_lead(lead: LeadData):
-    """Opprett ny lead fra widget"""
+    """Opprett ny lead fra widget (GDPR-compliant)"""
+    
+    # GDPR-validering
+    if not lead.privacy_consent:
+        raise HTTPException(
+            status_code=400, 
+            detail="Personvernssamtykke er påkrevd for å registrere lead. Se househacker.no sin personvernerklæring."
+        )
+    
+    # Validere påkrevde felt
+    if not all([lead.name, lead.phone, lead.email]):
+        raise HTTPException(
+            status_code=400,
+            detail="Navn, telefon og e-post er påkrevde felt."
+        )
     
     monday = MondayIntegration()
     result = await monday.create_lead(lead)
