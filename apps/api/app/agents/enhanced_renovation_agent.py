@@ -134,6 +134,8 @@ class EnhancedRenovationAgent(BaseAgent):
                 result = await self._compare_suppliers(analysis, query)
             elif analysis["type"] == "painting_specific":
                 result = await self._handle_painting_inquiry(analysis, query)
+            elif analysis["type"] == "detailed_breakdown":
+                result = await self._provide_detailed_breakdown(analysis, query)
             elif analysis["type"] == "needs_clarification" or analysis["needs_clarification"]:
                 result = await self._ask_clarifying_questions(analysis, query)
             else:
@@ -210,69 +212,37 @@ class EnhancedRenovationAgent(BaseAgent):
         
         total_cost = subtotal + prosjektledelse + uforutsett + rydding + byggesøknad
         
-        # Generer respons
+        # Generer enkel respons med kun totalkostnad
         response = f"""
-        <h2>🏗️ Komplett {project_type.replace('_', ' ').title()} - {area} m²</h2>
-        
-        <h3>📋 Detaljert kostnadsoverslag</h3>
-        <table style="width:100%; border-collapse: collapse;">
-        <tr style="background: #f5f5f5;">
-            <th style="border: 1px solid #ddd; padding: 8px;">Kategori</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Materialer</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Arbeid</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Timer</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Sum</th>
-        </tr>
-        """
-        
-        for material, calc in detailed_breakdown.items():
-            response += f"""
-            <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">{material.title()}</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{calc['material_cost']:,.0f} NOK</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{calc['labor_cost']:,.0f} NOK</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">{calc['hours']:.1f}t</td>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>{calc['total']:,.0f} NOK</strong></td>
-            </tr>
-            """
-        
-        response += f"""
-        </table>
-        
-        <h3>🛠️ Fast utstyr og installasjoner</h3>
-        <ul>
-        """
-        
-        if project_config and "base_kostnader" in project_config:
-            for item, kostnad in project_config["base_kostnader"].items():
-                response += f"""<li><strong>{item.replace('_', ' ').title()}:</strong> {kostnad:,.0f} NOK</li>"""
-        
-        response += f"""
-        </ul>
-        
-        <h3>💰 Kostnadssammendrag</h3>
-        <ul>
-            <li><strong>Materialer totalt:</strong> {total_material_cost:,.0f} NOK</li>
-            <li><strong>Arbeid totalt:</strong> {total_labor_cost:,.0f} NOK</li>
-            <li><strong>Fast utstyr:</strong> {base_kostnader_total:,.0f} NOK</li>
-            <li><strong>Prosjektledelse ({tillegg['prosjektledelse']*100:.0f}%):</strong> {prosjektledelse:,.0f} NOK</li>
-            <li><strong>Uforutsett ({tillegg['uforutsett']*100:.0f}%):</strong> {uforutsett:,.0f} NOK</li>
-            <li><strong>Rydding og avfall:</strong> {rydding:,.0f} NOK</li>"""
-        
-        if byggesøknad > 0:
-            response += f"""<li><strong>Byggesøknad:</strong> {byggesøknad:,.0f} NOK</li>"""
-        
-        response += """
-        </ul>
-        
-        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
-            <h3 style="color: #1976d2;">🎯 Totalkostnad: {total_cost:,.0f} NOK</h3>
-            <p><strong>Estimert tidsbruk:</strong> {total_time_hours:.0f} timer ({total_time_hours/8:.1f} arbeidsdager)</p>
-        </div>
-        
-        <p><small>💡 Prisene er estimater basert på markedspriser per {datetime.now().strftime('%B %Y')}. 
-        Faktiske priser kan variere ±15% avhengig av leverandør og kompleksitet.</small></p>
-        """
+<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
+    <h2 style="color: #1f2937; margin-bottom: 15px;">🏗️ Komplett {project_type.replace('_', ' ').title()} - {area:.0f} m²</h2>
+    
+    <div style="background: #1f2937; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <h3 style="color: white; margin-bottom: 10px;">💰 Estimert kostnad</h3>
+        <div style="font-size: 28px; font-weight: bold; color: #10b981;">{total_cost:,.0f} NOK</div>
+        <p style="margin-top: 10px; opacity: 0.9;">Estimert tidsbruk: {total_time_hours:.0f} timer ({total_time_hours/8:.1f} arbeidsdager)</p>
+    </div>
+    
+    <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
+        💡 Prisen inkluderer materialer, arbeid, utstyr, prosjektledelse og uforutsette kostnader. 
+        Faktiske priser kan variere ±15% avhengig av leverandør og kompleksitet.
+    </p>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+    <h3 style="color: #856404; margin-bottom: 15px;">🤝 Ønsker du inntil 3 tilbud på badrenovering?</h3>
+    <p style="margin-bottom: 20px;">Vi kobler deg med kvalifiserte håndverkere som kan gi deg konkrete tilbud basert på dine ønsker.</p>
+    
+    <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+            style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 0 10px;">
+        💬 Få gratis tilbud
+    </button>
+    
+    <button onclick="askQuestion('Jeg vil vite mer om kostnadene')" 
+            style="background: transparent; color: #856404; border: 2px solid #856404; padding: 13px 25px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 10px;">
+        📋 Flere detaljer
+    </button>
+</div>"""
         
         return {
             "response": response,
@@ -568,6 +538,8 @@ class EnhancedRenovationAgent(BaseAgent):
             analysis_type = "price_comparison"
         elif any(word in query_lower for word in ['maling', 'male']) and area:
             analysis_type = "painting_specific"
+        elif any(phrase in query_lower for phrase in ['flere detaljer', 'mer om kostnad', 'detaljert', 'breakdown', 'liste']):
+            analysis_type = "detailed_breakdown"
         elif len(query_lower.split()) <= 5 and any(phrase in query_lower for phrase in ['pusse opp', 'renovere', 'oppussing']):
             # Korte, generelle spørsmål som "jeg skal pusse opp"
             analysis_type = "needs_clarification"
@@ -644,6 +616,137 @@ class EnhancedRenovationAgent(BaseAgent):
             "agent_used": self.agent_name,
             "total_cost": total_cost,
             "breakdown": breakdown
+        }
+
+    async def _provide_detailed_breakdown(self, analysis: Dict, query: str) -> Dict[str, Any]:
+        """Gir detaljert kostnadsoppstilling for badrenovering 5m²"""
+        # Standard 5m² bad for detaljert breakdown
+        area = 5.0
+        project_type = "bad_komplett"
+        
+        project_config = self.PROJECT_TYPES.get(project_type)
+        total_material_cost = 0
+        total_labor_cost = 0
+        total_time_hours = 0
+        
+        detailed_breakdown = {}
+        
+        # Beregn for hvert material/arbeidsområde
+        if project_config:
+            for material in project_config["materialer"]:
+                if material in self.MATERIALS:
+                    mat_calc = self._calculate_material_with_labor(material, area)
+                    detailed_breakdown[material] = mat_calc
+                    total_material_cost += mat_calc["material_cost"]
+                    total_labor_cost += mat_calc["labor_cost"]
+                    total_time_hours += mat_calc["hours"]
+        
+        # Legg til base_kostnader (fast utstyr)
+        base_kostnader_total = 0
+        if project_config and "base_kostnader" in project_config:
+            for item, kostnad in project_config["base_kostnader"].items():
+                base_kostnader_total += kostnad
+        
+        # Legg til tillegg
+        tillegg = project_config["tillegg"]
+        subtotal = total_material_cost + total_labor_cost + base_kostnader_total
+        
+        prosjektledelse = subtotal * tillegg["prosjektledelse"]
+        uforutsett = subtotal * tillegg["uforutsett"]
+        rydding = tillegg["rydding"]
+        byggesøknad = tillegg.get("byggesøknad", 0)
+        
+        total_cost = subtotal + prosjektledelse + uforutsett + rydding + byggesøknad
+        
+        # Generer detaljert respons
+        response = f"""
+<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
+    <h2 style="color: #1f2937; margin-bottom: 15px;">📋 Detaljert kostnadsoppstilling - Bad 5 m²</h2>
+    
+    <h3 style="color: #374151;">🔨 Materialer og arbeid</h3>
+    <table style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
+    <tr style="background: #1f2937; color: white;">
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Kategori</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Materialer</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Arbeid</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Timer</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Sum</th>
+    </tr>"""
+        
+        for material, calc in detailed_breakdown.items():
+            material_name = {
+                "fliser": "Flislegging",
+                "rør": "Rørarbeider", 
+                "elektrisk": "Elektroarbeider",
+                "maling": "Maling"
+            }.get(material, material.title())
+            
+            response += f"""
+    <tr style="background: #ffffff;">
+        <td style="border: 1px solid #ddd; padding: 12px; font-weight: bold;">{material_name}</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{calc['material_cost']:,.0f} NOK</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{calc['labor_cost']:,.0f} NOK</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">{calc['hours']:.1f}t</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: right; font-weight: bold;">{calc['total']:,.0f} NOK</td>
+    </tr>"""
+        
+        response += f"""
+    </table>
+    
+    <h3 style="color: #374151;">🛠️ Fast utstyr og installasjoner</h3>
+    <ul style="background: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">"""
+        
+        if project_config and "base_kostnader" in project_config:
+            for item, kostnad in project_config["base_kostnader"].items():
+                item_name = {
+                    "wc": "WC/toalett",
+                    "servant": "Servant og speil",
+                    "dusjkabinett": "Dusjkabinett",
+                    "ventilasjon": "Ventilasjon",
+                    "gulvvarme": "Gulvvarme",
+                    "riving": "Riving og klargjøring"
+                }.get(item, item.replace('_', ' ').title())
+                response += f"""<li><strong>{item_name}:</strong> {kostnad:,.0f} NOK</li>"""
+        
+        response += f"""
+    </ul>
+    
+    <h3 style="color: #374151;">💰 Kostnadssammendrag</h3>
+    <div style="background: #ffffff; padding: 15px; border-radius: 8px;">
+        <ul>
+            <li><strong>Materialer totalt:</strong> {total_material_cost:,.0f} NOK</li>
+            <li><strong>Arbeid totalt:</strong> {total_labor_cost:,.0f} NOK</li>
+            <li><strong>Fast utstyr:</strong> {base_kostnader_total:,.0f} NOK</li>
+            <li><strong>Prosjektledelse ({tillegg['prosjektledelse']*100:.0f}%):</strong> {prosjektledelse:,.0f} NOK</li>
+            <li><strong>Uforutsett ({tillegg['uforutsett']*100:.0f}%):</strong> {uforutsett:,.0f} NOK</li>
+            <li><strong>Rydding og avfall:</strong> {rydding:,.0f} NOK</li>"""
+        
+        if byggesøknad > 0:
+            response += f"""<li><strong>Byggesøknad:</strong> {byggesøknad:,.0f} NOK</li>"""
+        
+        response += f"""
+        </ul>
+    </div>
+    
+    <div style="background: #1f2937; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <h3 style="color: white; margin-bottom: 10px;">🎯 Totalkostnad</h3>
+        <div style="font-size: 28px; font-weight: bold; color: #10b981;">{total_cost:,.0f} NOK</div>
+        <p style="margin-top: 10px; opacity: 0.9;">Estimert tidsbruk: {total_time_hours:.0f} timer ({total_time_hours/8:.1f} arbeidsdager)</p>
+    </div>
+    
+    <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
+        💡 Dette er en detaljert oppstilling for et standard 5m² bad i Oslo. Prisene er basert på markedspriser og inkluderer alle nødvendige materialer, arbeid og tilleggskostnader.
+    </p>
+</div>"""
+        
+        return {
+            "response": response,
+            "agent_used": self.agent_name,
+            "total_cost": total_cost,
+            "material_cost": total_material_cost,
+            "labor_cost": total_labor_cost,
+            "estimated_hours": total_time_hours,
+            "breakdown": detailed_breakdown
         }
 
     async def _compare_suppliers(self, analysis: Dict, query: str) -> Dict[str, Any]:
