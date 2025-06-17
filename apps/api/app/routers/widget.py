@@ -238,17 +238,17 @@ async def get_widget_html(partner_id: str, db: Session = Depends(get_db)):
             </div>
             
             <div class="examples">
-                <div class="example" onclick="askQuestion('Jeg vil registrere et oppussingsprosjekt')">
-                    Registrer prosjekt
+                <div class="example" onclick="askQuestion('Registrer et prosjekt')">
+                    Registrer et prosjekt
                 </div>
-                <div class="example" onclick="askQuestion('Hva koster badrenovering?')">
-                    Kostnader bad
+                <div class="example" onclick="askQuestion('Hva koster et bad?')">
+                    Hva koster et bad
                 </div>
-                <div class="example" onclick="askQuestion('Hvordan fungerer househacker?')">
-                    Om househacker
+                <div class="example" onclick="askQuestion('Hva koster et kjøkken?')">
+                    Hva koster et kjøkken
                 </div>
-                <div class="example" onclick="askQuestion('Jeg trenger hjelp med kjøkkenrenovering')">
-                    Hjelp med kjøkken
+                <div class="example" onclick="askQuestion('Pris på maling av 100 kvm')">
+                    Pris på maling av 100 kvm
                 </div>
             </div>
             

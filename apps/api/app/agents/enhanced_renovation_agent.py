@@ -22,20 +22,24 @@ class EnhancedRenovationAgent(BaseAgent):
         # Faktabasert informasjon om househacker
         self.COMPANY_INFO = {
             "name": "househacker",
-            "description": "Vi kobler kunder med kvalifiserte håndverkere for oppussingsprosjekter",
+            "description": "Vi hjelper til i anbudsprosessen og sparer både kunden og entreprenøren for tid",
+            "main_goal": "Definere prosjektet i samarbeid med kunden for at jobben skal bli bedre for alle parter",
+            "products": {
+                "solo": "Solo-pakke for enkle prosjekter",
+                "direkte": "Direkte kontakt med utvalgte entreprenører", 
+                "premium": "Premium-tjeneste med full oppfølging"
+            },
             "services": [
-                "Formidling av håndverkere",
-                "Tilbudssammenligning", 
-                "Prosjektkoordinering",
-                "Kostnadsestimater"
+                "Hjelp i anbudsprosessen",
+                "Prosjektdefinisjon i samarbeid med kunde",
+                "Tidsbesparelse for både kunde og entreprenør"
             ],
             "process": [
                 "Kunde registrerer prosjekt",
-                "Vi organiserer befaring med håndverkere",
-                "Kunde får tilbud å sammenligne",
-                "Vi hjelper med koordinering av valgt tilbyder"
-            ],
-            "coverage_area": "Oslo og omegn"
+                "Vi definerer prosjektet sammen med kunden",
+                "Anbudsprosess med relevante entreprenører",
+                "Kunde velger tilbyder"
+            ]
         }
         
         # Profesjonelle Oslo-priser 2025 (håndverkerpriser, ikke DIY)
@@ -571,12 +575,14 @@ class EnhancedRenovationAgent(BaseAgent):
             analysis_type = "painting_specific"
         elif any(phrase in query_lower for phrase in ['flere detaljer', 'mer om kostnad', 'detaljert', 'breakdown', 'liste']):
             analysis_type = "detailed_breakdown"
-        elif any(phrase in query_lower for phrase in ['tilbud', 'gi meg et tilbud', 'kan du gi', 'trenger tilbud', 'få tilbud', 'hjelp med', 'på dette']):
+        elif any(phrase in query_lower for phrase in ['tilbud', 'gi meg et tilbud', 'kan du gi', 'trenger tilbud', 'få tilbud', 'på dette']) and 'hjelp med' not in query_lower:
             analysis_type = "quote_request"
-        elif any(phrase in query_lower for phrase in ['registrere prosjekt', 'registrere et prosjekt', 'jeg vil registrere', 'melde fra om prosjekt']):
+        elif any(phrase in query_lower for phrase in ['registrere prosjekt', 'registrere et prosjekt', 'registrer et prosjekt', 'jeg vil registrere', 'melde fra om prosjekt']):
             analysis_type = "project_registration"
         elif any(phrase in query_lower for phrase in ['hvordan fungerer', 'om househacker', 'hva er househacker', 'hvem er househacker']):
             analysis_type = "about_househacker"
+        elif 'hjelp med' in query_lower and any(word in query_lower for word in ['kjøkken', 'bad', 'renovering']):
+            analysis_type = "full_project_estimate"  # Behandle som kostnadsforespørsel
         elif len(query_lower.split()) <= 5 and any(phrase in query_lower for phrase in ['pusse opp', 'renovere', 'oppussing']):
             # Korte, generelle spørsmål som "jeg skal pusse opp"
             analysis_type = "needs_clarification"
@@ -789,83 +795,85 @@ class EnhancedRenovationAgent(BaseAgent):
     async def _handle_quote_request(self, analysis: Dict, query: str) -> Dict[str, Any]:
         """Håndterer forespørsler om tilbud eller konsultasjon"""
         response = f"""
-<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
-    <h2 style="color: #1f2937; margin-bottom: 15px;">🤝 Gratis tilbud og konsultasjon</h2>
+<div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 16px 0;">
+    <h2 style="color: #333; margin-bottom: 16px; font-size: 18px; font-weight: 600;">Anbudsprosess med househacker</h2>
     
-    <p style="margin-bottom: 20px;">Fantastisk! Vi hjelper deg gjerne med å finne kvalifiserte håndverkere for ditt prosjekt.</p>
+    <p style="margin-bottom: 16px; color: #555; line-height: 1.5;">
+        {self.COMPANY_INFO["description"]}. {self.COMPANY_INFO["main_goal"]}.
+    </p>
     
-    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #856404; margin-bottom: 15px;">🏗️ Dette får du med vårt tilbud:</h3>
-        <ul style="margin-bottom: 20px;">
-            <li>✅ Inntil 3 tilbud fra kvalifiserte håndverkere</li>
-            <li>✅ Sammenligning av priser og tjenester</li>
-            <li>✅ Gratis befaring og konsultasjon</li>
-            <li>✅ Veiledning gjennom hele prosessen</li>
-            <li>✅ Kvalitetssikring av arbeidet</li>
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Våre tjenester:</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">"""
+        
+        for service in self.COMPANY_INFO["services"]:
+            response += f"<li style='margin-bottom: 4px;'>{service}</li>"
+        
+        response += f"""
         </ul>
-        
-        <div style="text-align: center;">
-            <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
-                    style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 10px;">
-                💬 Få gratis tilbud nå
-            </button>
-        </div>
-        
-        <p style="font-size: 14px; color: #856404; text-align: center; margin-top: 15px;">
-            📞 Eller ring oss direkte for rask hjelp
-        </p>
     </div>
     
-    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
-        <h4 style="color: #1976d2; margin-bottom: 10px;">⚡ Hvorfor velge oss?</h4>
-        <p style="margin: 0; font-size: 14px;">
-            Vi samarbeider kun med sertifiserte håndverkere med dokumentert erfaring. 
-            Alle tilbud er forpliktende og du får garanti på arbeidet.
-        </p>
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Produktalternativer:</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">"""
+        
+        for product, description in self.COMPANY_INFO["products"].items():
+            response += f"<li style='margin-bottom: 4px;'><strong>{product.title()}:</strong> {description}</li>"
+        
+        response += f"""
+        </ul>
+    </div>
+    
+    <div style="margin-top: 16px; text-align: center;">
+        <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+                style="background: #333; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            Registrer prosjekt
+        </button>
     </div>
 </div>"""
         
         return {
             "response": response,
             "agent_used": self.agent_name,
-            "total_cost": 0,  # Ikke en kalkulator, så ingen kostnad
+            "total_cost": 0,
             "show_lead_capture": True
         }
 
     async def _handle_project_registration(self, analysis: Dict, query: str) -> Dict[str, Any]:
         """Håndterer prosjektregistrering direkte"""
         response = f"""
-<div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid #374151;">
-    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Registrer ditt oppussingsprosjekt</h2>
+<div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 16px 0;">
+    <h2 style="color: #333; margin-bottom: 16px; font-size: 18px; font-weight: 600;">Registrer ditt oppussingsprosjekt</h2>
     
-    <p style="margin-bottom: 20px; color: #374151; line-height: 1.6;">
-        Bra at du vil registrere et prosjekt! Vi hjelper deg komme i kontakt med kvalifiserte håndverkere.
+    <p style="margin-bottom: 16px; color: #555; line-height: 1.5;">
+        {self.COMPANY_INFO["description"]}. {self.COMPANY_INFO["main_goal"]}.
     </p>
     
-    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Dette får du:</h3>
-        <ul style="margin: 0; padding-left: 20px; color: #374151;">
-            <li style="margin-bottom: 6px;">Tilgang til vårt nettverk av håndverkere</li>
-            <li style="margin-bottom: 6px;">Sammenligning av tilbud</li>
-            <li style="margin-bottom: 6px;">Koordinering av prosjektet</li>
-            <li style="margin-bottom: 6px;">Kostnadsestimater basert på ditt prosjekt</li>
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Våre tjenester:</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">"""
+        
+        for service in self.COMPANY_INFO["services"]:
+            response += f"<li style='margin-bottom: 4px;'>{service}</li>"
+        
+        response += f"""
         </ul>
     </div>
     
-    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Prosessen:</h3>
-        <ol style="margin: 0; padding-left: 20px; color: #374151;">"""
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Prosessen:</h3>
+        <ol style="margin: 0; padding-left: 18px; color: #555;">"""
         
         for step in self.COMPANY_INFO["process"]:
-            response += f"<li style='margin-bottom: 6px;'>{step}</li>"
+            response += f"<li style='margin-bottom: 4px;'>{step}</li>"
             
         response += f"""
         </ol>
     </div>
     
-    <div style="text-align: center; margin-top: 20px;">
+    <div style="text-align: center; margin-top: 16px;">
         <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
-                style="background: #374151; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                style="background: #333; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
             Registrer prosjekt
         </button>
     </div>
@@ -880,43 +888,47 @@ class EnhancedRenovationAgent(BaseAgent):
     async def _explain_househacker_services(self, analysis: Dict, query: str) -> Dict[str, Any]:
         """Forklarer househacker sine tjenester basert på faktisk informasjon"""
         response = f"""
-<div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid #374151;">
-    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Om househacker</h2>
+<div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 16px 0;">
+    <h2 style="color: #333; margin-bottom: 16px; font-size: 18px; font-weight: 600;">Om househacker</h2>
     
-    <p style="margin-bottom: 20px; color: #374151; line-height: 1.6;">
-        {self.COMPANY_INFO["description"]} i {self.COMPANY_INFO["coverage_area"]}.
+    <p style="margin-bottom: 16px; color: #555; line-height: 1.5;">
+        {self.COMPANY_INFO["description"]}.
     </p>
     
-    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Våre tjenester:</h3>
-        <ul style="margin: 0; padding-left: 20px; color: #374151;">"""
+    <p style="margin-bottom: 20px; color: #555; line-height: 1.5;">
+        {self.COMPANY_INFO["main_goal"]}.
+    </p>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Våre produkter:</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">"""
         
-        for service in self.COMPANY_INFO["services"]:
-            response += f"<li style='margin-bottom: 6px;'>{service}</li>"
+        for product, description in self.COMPANY_INFO["products"].items():
+            response += f"<li style='margin-bottom: 4px;'><strong>{product.title()}:</strong> {description}</li>"
         
         response += f"""
         </ul>
     </div>
     
-    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Slik fungerer det:</h3>
-        <ol style="margin: 0; padding-left: 20px; color: #374151;">"""
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Prosessen:</h3>
+        <ol style="margin: 0; padding-left: 18px; color: #555;">"""
         
         for step in self.COMPANY_INFO["process"]:
-            response += f"<li style='margin-bottom: 6px;'>{step}</li>"
+            response += f"<li style='margin-bottom: 4px;'>{step}</li>"
         
         response += f"""
         </ol>
     </div>
     
-    <div style="margin-top: 20px;">
-        <button onclick="askQuestion('Jeg vil registrere et oppussingsprosjekt')" 
-                style="background: #374151; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; margin-right: 8px;">
+    <div style="margin-top: 16px;">
+        <button onclick="askQuestion('Registrer et prosjekt')" 
+                style="background: #333; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; margin-right: 8px;">
             Registrer prosjekt
         </button>
         
-        <button onclick="askQuestion('Hva koster badrenovering?')" 
-                style="background: transparent; color: #374151; border: 1px solid #374151; padding: 11px 23px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+        <button onclick="askQuestion('Hva koster et bad?')" 
+                style="background: transparent; color: #333; border: 1px solid #333; padding: 9px 19px; border-radius: 4px; font-size: 14px; cursor: pointer;">
             Se kostnader
         </button>
     </div>
