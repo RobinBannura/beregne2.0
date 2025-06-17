@@ -8,7 +8,7 @@ import uvicorn
 from sqlalchemy.orm import Session
 
 from .orchestrator import AgentOrchestrator
-from .routers import partners, widget, dashboard
+from .routers import partners, widget, dashboard, leads
 from .database import create_tables, get_db
 from .models.partner import Partner
 
@@ -47,6 +47,7 @@ orchestrator = AgentOrchestrator()
 app.include_router(partners.router)
 app.include_router(widget.router)
 app.include_router(dashboard.router)
+app.include_router(leads.router)
 
 # Request/Response models
 class ChatRequest(BaseModel):
