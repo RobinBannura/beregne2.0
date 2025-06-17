@@ -667,6 +667,8 @@ class EnhancedRenovationAgent(BaseAgent):
         # Type analyse
         if any(word in query_lower for word in ['komplett', 'totalrenovering', 'alt', 'hele']):
             analysis_type = "full_project_estimate"
+        elif project_type == "kjøkken_detaljert":
+            analysis_type = "full_project_estimate"  # Alle kjøkkenspørsmål skal bruke detaljert guide
         elif any(word in query_lower for word in ['arbeid', 'lønn', 'timepris', 'håndverker']):
             analysis_type = "material_and_labor"
         elif any(word in query_lower for word in ['sammenlign', 'pris', 'billigst', 'leverandør']):
