@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from .orchestrator import AgentOrchestrator
 from .routers import partners, widget, dashboard, leads
-from .database import create_tables, get_db
+from .database import create_tables, get_db, SessionLocal
 from .models.partner import Partner
 
 # Configure logging
@@ -73,6 +73,39 @@ async def startup_event():
     # Create database tables
     create_tables()
     logger.info("📊 Database initialized")
+    
+    # Initialize default partners
+    try:
+        from .models.partner import Partner
+        db = SessionLocal()
+        
+        # Check if househacker exists
+        existing = db.query(Partner).filter(Partner.partner_id == "househacker").first()
+        if not existing:
+            logger.info("🏗️ Creating househacker partner...")
+            househacker = Partner(
+                partner_id="househacker",
+                name="househacker AS",
+                domain="househacker.no",
+                brand_name="househacker",
+                brand_color="#e11d48",
+                logo_url="https://househacker.no/logo.png",
+                enabled_agents=["renovation"],
+                agent_display_name="Oppussingsrådgiver",
+                welcome_message="Hei! Jeg er househacker sin oppussingsrådgiver. Jeg kan hjelpe deg beregne materialer og kostnader for ditt oppussingsprosjekt.",
+                widget_position="bottom-right",
+                widget_theme="light",
+                show_branding=True
+            )
+            db.add(househacker)
+            db.commit()
+            logger.info("✅ Created househacker partner")
+        else:
+            logger.info("✅ househacker partner already exists")
+        
+        db.close()
+    except Exception as e:
+        logger.error(f"❌ Error creating partner: {e}")
     
     logger.info(f"🤖 Loaded {orchestrator.get_agent_count()} agents")
     
