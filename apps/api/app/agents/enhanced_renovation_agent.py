@@ -474,14 +474,55 @@ class EnhancedRenovationAgent(BaseAgent):
     def can_handle(self, query: str) -> bool:
         """Sjekker om denne agenten kan håndtere spørringen"""
         renovation_keywords = [
-            "oppussing", "renovering", "maling", "fliser", "laminat", "bad", "kjøkken",
-            "material", "kostnad", "pris", "bygge", "installere", "rør", "elektrisk",
-            "gips", "isolasjon", "vegg", "gulv", "tak", "prosjekt", "håndverker",
-            "byggevareh", "maxbo", "byggmax", "jernia", "arbeidstime", "timepris"
+            # Grunnleggende oppussingsord
+            "oppussing", "oppuss", "pusse opp", "renovering", "renovere", "renover",
+            "bygge", "bygg", "installere", "installer", "montere", "monter",
+            
+            # Rom og områder
+            "bad", "baderom", "toalett", "wc", "kjøkken", "kitchen", "stue", "soverom",
+            "gang", "hall", "entré", "balkong", "terasse", "kjeller", "loft",
+            
+            # Materialer
+            "maling", "male", "maler", "fliser", "flise", "laminat", "parkett",
+            "gips", "gipse", "isolasjon", "isolere", "rør", "rørlegger", 
+            "elektrisk", "elektriker", "elektro", "kabler",
+            
+            # Overflater
+            "vegg", "vegger", "tak", "gulv", "gulvet", "dør", "dører", 
+            "vindu", "vinduer", "liste", "lister",
+            
+            # Kostnader og planlegging
+            "kostnad", "koster", "pris", "priser", "budsjett", "estimat",
+            "kalkulator", "beregn", "hvor mye", "material", "utstyr",
+            
+            # Håndverkere og tjenester
+            "håndverker", "tømrer", "maler", "elektriker", "rørlegger",
+            "flislegger", "snekkere", "arbeidstime", "timepris",
+            
+            # Butikker
+            "byggevareh", "maxbo", "byggmax", "jernia", "obs bygg",
+            
+            # Generelle ord som kan relatere til oppussing
+            "prosjekt", "jobb", "arbeid", "hjem", "hus", "leilighet",
+            "forbedre", "endre", "skifte", "bytte", "erstatte"
         ]
         
         query_lower = query.lower()
-        return any(keyword in query_lower for keyword in renovation_keywords)
+        
+        # Sjekk eksakte matches først
+        if any(keyword in query_lower for keyword in renovation_keywords):
+            return True
+            
+        # Sjekk vanlige fraser
+        common_phrases = [
+            "skal pusse", "vil pusse", "ønsker å pusse", "planlegger å pusse",
+            "skal renovere", "vil renovere", "ønsker å renovere", "planlegger å renovere",
+            "skal bygge", "vil bygge", "ønsker å bygge", "planlegger å bygge",
+            "trenger hjelp", "kan du hjelle", "hvor mye koster", "hva koster",
+            "kan jeg regne med", "estimere kostnad", "beregne pris"
+        ]
+        
+        return any(phrase in query_lower for phrase in common_phrases)
 
     def get_capabilities(self) -> Dict[str, Any]:
         """Returnerer informasjon om hva denne agenten kan gjøre"""
@@ -525,8 +566,11 @@ class EnhancedRenovationAgent(BaseAgent):
             analysis_type = "material_and_labor"
         elif any(word in query_lower for word in ['sammenlign', 'pris', 'billigst', 'leverandør']):
             analysis_type = "price_comparison"
-        elif any(word in query_lower for word in ['maling', 'male']):
+        elif any(word in query_lower for word in ['maling', 'male']) and area:
             analysis_type = "painting_specific"
+        elif len(query_lower.split()) <= 5 and any(phrase in query_lower for phrase in ['pusse opp', 'renovere', 'oppussing']):
+            # Korte, generelle spørsmål som "jeg skal pusse opp"
+            analysis_type = "needs_clarification"
         else:
             analysis_type = "needs_clarification"
         
@@ -655,9 +699,18 @@ class EnhancedRenovationAgent(BaseAgent):
             if not details.get("old_wallpaper"):
                 questions.append("📰 Er det tapet på veggene som må fjernes?")
         
+        # Sjekk om det er et veldig generelt spørsmål
+        is_very_general = len(query.split()) <= 5 and any(phrase in query.lower() for phrase in ['pusse opp', 'oppussing', 'renovere'])
+        
+        if is_very_general:
+            greeting = "Flott at du skal pusse opp! 🏠"
+        else:
+            greeting = "Jeg hjelper deg gjerne med kostnadsestimatet! 😊"
+        
         # Generer respons med spørsmål og veiledende priser
         response = f"""
-        <h2>🤔 Jeg trenger litt mer informasjon for å gi deg et presist estimat</h2>
+        <h2>🤔 {greeting}</h2>
+        <p>For å gi deg det mest presise estimatet trenger jeg litt mer informasjon:</p>
         
         <h3>📝 Kan du svare på følgende:</h3>
         <ul>
