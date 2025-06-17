@@ -136,13 +136,16 @@ class EnhancedRenovationAgent(BaseAgent):
                 result = await self._handle_painting_inquiry(analysis, query)
             elif analysis["type"] == "detailed_breakdown":
                 result = await self._provide_detailed_breakdown(analysis, query)
+            elif analysis["type"] == "quote_request":
+                result = await self._handle_quote_request(analysis, query)
             elif analysis["type"] == "needs_clarification" or analysis["needs_clarification"]:
                 result = await self._ask_clarifying_questions(analysis, query)
             else:
                 result = await self._basic_calculation(analysis, query)
             
-            # Lead-generering hvis stort prosjekt
-            if result.get("total_cost", 0) > self.MONDAY_CONFIG["lead_threshold"]:
+            # Lead-generering for alle kalkulasjoner over 10,000 NOK eller hvis brukeren spør om tilbud
+            total_cost = result.get("total_cost", 0)
+            if total_cost > 10000 or analysis["type"] in ["quote_request", "full_project_estimate"]:
                 result["lead_generation"] = self._generate_lead_capture(result)
             
             return result
@@ -464,6 +467,7 @@ class EnhancedRenovationAgent(BaseAgent):
             # Kostnader og planlegging
             "kostnad", "koster", "pris", "priser", "budsjett", "estimat",
             "kalkulator", "beregn", "hvor mye", "material", "utstyr",
+            "tilbud", "pristilbud", "anbud", "offert", "konsultasjon",
             
             # Håndverkere og tjenester
             "håndverker", "tømrer", "maler", "elektriker", "rørlegger",
@@ -489,7 +493,10 @@ class EnhancedRenovationAgent(BaseAgent):
             "skal renovere", "vil renovere", "ønsker å renovere", "planlegger å renovere",
             "skal bygge", "vil bygge", "ønsker å bygge", "planlegger å bygge",
             "trenger hjelp", "kan du hjelle", "hvor mye koster", "hva koster",
-            "kan jeg regne med", "estimere kostnad", "beregne pris"
+            "kan jeg regne med", "estimere kostnad", "beregne pris",
+            "gi meg et tilbud", "kan du gi", "tilbud på", "hjelp med",
+            "trenger tilbud", "vil ha tilbud", "ønsker tilbud", "få tilbud",
+            "kan jeg få", "hjelpe meg", "på dette", "dette arbeidet"
         ]
         
         return any(phrase in query_lower for phrase in common_phrases)
@@ -540,6 +547,8 @@ class EnhancedRenovationAgent(BaseAgent):
             analysis_type = "painting_specific"
         elif any(phrase in query_lower for phrase in ['flere detaljer', 'mer om kostnad', 'detaljert', 'breakdown', 'liste']):
             analysis_type = "detailed_breakdown"
+        elif any(phrase in query_lower for phrase in ['tilbud', 'gi meg et tilbud', 'kan du gi', 'trenger tilbud', 'få tilbud', 'hjelp med', 'på dette']):
+            analysis_type = "quote_request"
         elif len(query_lower.split()) <= 5 and any(phrase in query_lower for phrase in ['pusse opp', 'renovere', 'oppussing']):
             # Korte, generelle spørsmål som "jeg skal pusse opp"
             analysis_type = "needs_clarification"
@@ -749,6 +758,52 @@ class EnhancedRenovationAgent(BaseAgent):
             "breakdown": detailed_breakdown
         }
 
+    async def _handle_quote_request(self, analysis: Dict, query: str) -> Dict[str, Any]:
+        """Håndterer forespørsler om tilbud eller konsultasjon"""
+        response = f"""
+<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
+    <h2 style="color: #1f2937; margin-bottom: 15px;">🤝 Gratis tilbud og konsultasjon</h2>
+    
+    <p style="margin-bottom: 20px;">Fantastisk! Vi hjelper deg gjerne med å finne kvalifiserte håndverkere for ditt prosjekt.</p>
+    
+    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #856404; margin-bottom: 15px;">🏗️ Dette får du med vårt tilbud:</h3>
+        <ul style="margin-bottom: 20px;">
+            <li>✅ Inntil 3 tilbud fra kvalifiserte håndverkere</li>
+            <li>✅ Sammenligning av priser og tjenester</li>
+            <li>✅ Gratis befaring og konsultasjon</li>
+            <li>✅ Veiledning gjennom hele prosessen</li>
+            <li>✅ Kvalitetssikring av arbeidet</li>
+        </ul>
+        
+        <div style="text-align: center;">
+            <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+                    style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 10px;">
+                💬 Få gratis tilbud nå
+            </button>
+        </div>
+        
+        <p style="font-size: 14px; color: #856404; text-align: center; margin-top: 15px;">
+            📞 Eller ring oss direkte for rask hjelp
+        </p>
+    </div>
+    
+    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <h4 style="color: #1976d2; margin-bottom: 10px;">⚡ Hvorfor velge oss?</h4>
+        <p style="margin: 0; font-size: 14px;">
+            Vi samarbeider kun med sertifiserte håndverkere med dokumentert erfaring. 
+            Alle tilbud er forpliktende og du får garanti på arbeidet.
+        </p>
+    </div>
+</div>"""
+        
+        return {
+            "response": response,
+            "agent_used": self.agent_name,
+            "total_cost": 0,  # Ikke en kalkulator, så ingen kostnad
+            "show_lead_capture": True
+        }
+
     async def _compare_suppliers(self, analysis: Dict, query: str) -> Dict[str, Any]:
         """Sammenligner priser fra forskjellige leverandører"""
         materials = analysis.get("materials", ["maling"])
@@ -915,7 +970,28 @@ class EnhancedRenovationAgent(BaseAgent):
             <li>🌡️ <strong>Temperatur:</strong> Mal ved 18-22°C for best resultat</li>
             <li>📐 <strong>Teknikk:</strong> Mal først kanter med pensel, deretter rull</li>
             <li>💧 <strong>Underlag:</strong> Vask vegger først, sparkle hull og riper</li>
-        </ul>
+        </ul>"""
+        
+        # Legg til tilbudsforespørsel hvis kostnad er over 10,000 NOK
+        if paint_calc['total_cost'] > 10000:
+            response += f"""
+        
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+    <h3 style="color: #856404; margin-bottom: 15px;">🤝 Ønsker du profesjonell hjelp?</h3>
+    <p style="margin-bottom: 20px;">Dette er et større malingsjobb på {paint_calc['total_cost']:,.0f} NOK. Vi kan koble deg med erfarne malere!</p>
+    
+    <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+            style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 0 10px;">
+        🎨 Få tilbud fra malere
+    </button>
+    
+    <button onclick="askQuestion('Jeg vil vite mer om malingskostnadene')" 
+            style="background: transparent; color: #856404; border: 2px solid #856404; padding: 13px 25px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 10px;">
+        📋 Flere detaljer
+    </button>
+</div>"""
+        
+        response += """
         """
         
         return {
