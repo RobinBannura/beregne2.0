@@ -150,7 +150,10 @@ class EnhancedRenovationAgent(BaseAgent):
             analysis = self._analyze_renovation_query(query)
             
             if analysis["type"] == "full_project_estimate":
-                result = await self._calculate_full_project(analysis, query)
+                if analysis.get("project_type") == "kjøkken_detaljert":
+                    result = await self._provide_kitchen_breakdown(analysis, query)
+                else:
+                    result = await self._calculate_full_project(analysis, query)
             elif analysis["type"] == "material_and_labor":
                 result = await self._calculate_material_and_labor(analysis, query)
             elif analysis["type"] == "price_comparison":
@@ -282,6 +285,103 @@ class EnhancedRenovationAgent(BaseAgent):
             "labor_cost": total_labor_cost,
             "estimated_hours": total_time_hours,
             "breakdown": detailed_breakdown
+        }
+
+    async def _provide_kitchen_breakdown(self, analysis: Dict, query: str) -> Dict[str, Any]:
+        """Gir detaljert kjøkkenrenovering guide med realistiske kostnader"""
+        response = f"""
+<div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 16px 0;">
+    <h2 style="color: #333; margin-bottom: 16px; font-size: 18px; font-weight: 600;">Kjøkkenrenovering - Oslo-området</h2>
+    
+    <p style="margin-bottom: 16px; color: #555; line-height: 1.5;">
+        Typisk oppsett og kostnader for kjøkkenrenovering:
+    </p>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">1. Riving av eksisterende kjøkken</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;">Prøv å selge eller gi bort gratis mot demontering og henting</li>
+            <li style="margin-bottom: 4px;">Det er både billigere og mer miljøvennlig enn avfallshåndtering</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">2. Avfallshåndtering</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;">2.000–5.000 kr hvis du må kaste kjøkkenet</li>
+            <li style="margin-bottom: 4px;">Gratis hvis noen henter det</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">3. Nytt røropplegg</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;">ca. 30.000 kr for komplett opplegg</li>
+            <li style="margin-bottom: 4px;">Lavere hvis man gjenbruker eksisterende føringsveier</li>
+            <li style="margin-bottom: 4px;">Husk lekkasjesikring (krav)</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">4. Nytt elektrisk anlegg</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;">ca. 30.000 kr, avhengig av antall kurser og punkter</li>
+            <li style="margin-bottom: 4px;">Husk komfyrvakt (påbudt)</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">5. Kjøkkeninnredning og hvitevarer</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;"><strong>IKEA/startpakke:</strong> fra 50.000 kr</li>
+            <li style="margin-bottom: 4px;"><strong>Midtsegment:</strong> 100.000–200.000 kr</li>
+            <li style="margin-bottom: 4px;"><strong>Skreddersydd/snekker:</strong> 200.000–500.000+ kr</li>
+            <li style="margin-bottom: 4px;">Kommer an på stil, materialer, hvitevarer og løsninger</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">6. Benkeplate</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;"><strong>Laminat:</strong> fra 2.000 kr</li>
+            <li style="margin-bottom: 4px;"><strong>Tre:</strong> fra 5.000 kr</li>
+            <li style="margin-bottom: 4px;"><strong>Stein/kompositt:</strong> fra 15.000 kr og oppover</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; padding: 16px; border-radius: 4px; margin: 16px 0; border: 1px solid #ddd;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">7. Montering av kjøkken</h3>
+        <ul style="margin: 0; padding-left: 18px; color: #555;">
+            <li style="margin-bottom: 4px;">ca. 20.000 kr, avhengig av kompleksitet og løsning</li>
+        </ul>
+    </div>
+    
+    <div style="background: #ffffff; border: 1px solid #ddd; padding: 16px; border-radius: 4px; margin: 16px 0;">
+        <h3 style="color: #333; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Vil du ha et mer presist estimat?</h3>
+        <p style="margin-bottom: 12px; color: #555; font-size: 14px;">
+            Bare si fra hvor stort kjøkkenet er og hva slags løsning du vurderer, så hjelper jeg deg gjerne videre.
+        </p>
+        
+        <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+                style="background: #333; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; margin-right: 8px;">
+            Få tilbud
+        </button>
+        
+        <button onclick="askQuestion('Jeg vil vite mer om kjøkkenkostnader')" 
+                style="background: transparent; color: #333; border: 1px solid #333; padding: 9px 19px; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            Mer info
+        </button>
+    </div>
+</div>"""
+        
+        # Beregn estimert totalkostnad (midtsjikt)
+        estimated_total = 30000 + 30000 + 125000 + 10000 + 20000 + 5000  # Ca. 220k for standard renovering
+        
+        return {
+            "response": response,
+            "agent_used": self.agent_name,
+            "total_cost": estimated_total,
+            "project_type": "kjøkken_detaljert"
         }
 
     def _calculate_material_with_labor(self, material: str, area: float) -> Dict[str, Any]:
@@ -560,7 +660,7 @@ class EnhancedRenovationAgent(BaseAgent):
         if any(word in query_lower for word in ['bad', 'baderom', 'toalett']):
             project_type = "bad_komplett"
         elif any(word in query_lower for word in ['kjøkken', 'kitchen']):
-            project_type = "kjøkken_komplett"
+            project_type = "kjøkken_detaljert"
         else:
             project_type = "unknown"
         
