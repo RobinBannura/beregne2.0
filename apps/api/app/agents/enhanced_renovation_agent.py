@@ -19,6 +19,25 @@ class EnhancedRenovationAgent(BaseAgent):
         super().__init__()
         self.agent_name = "renovation"
         
+        # Faktabasert informasjon om househacker
+        self.COMPANY_INFO = {
+            "name": "househacker",
+            "description": "Vi kobler kunder med kvalifiserte håndverkere for oppussingsprosjekter",
+            "services": [
+                "Formidling av håndverkere",
+                "Tilbudssammenligning", 
+                "Prosjektkoordinering",
+                "Kostnadsestimater"
+            ],
+            "process": [
+                "Kunde registrerer prosjekt",
+                "Vi organiserer befaring med håndverkere",
+                "Kunde får tilbud å sammenligne",
+                "Vi hjelper med koordinering av valgt tilbyder"
+            ],
+            "coverage_area": "Oslo og omegn"
+        }
+        
         # Profesjonelle Oslo-priser 2025 (håndverkerpriser, ikke DIY)
         self.MATERIALS = {
             "maling": {
@@ -221,33 +240,33 @@ class EnhancedRenovationAgent(BaseAgent):
         
         # Generer enkel respons med kun totalkostnad
         response = f"""
-<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
-    <h2 style="color: #1f2937; margin-bottom: 15px;">🏗️ Komplett {project_type.replace('_', ' ').title()} - {area:.0f} m²</h2>
+<div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid #374151;">
+    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Komplett {project_type.replace('_', ' ').title()} - {area:.0f} m²</h2>
     
-    <div style="background: #1f2937; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-        <h3 style="color: white; margin-bottom: 10px;">💰 Estimert kostnad</h3>
-        <div style="font-size: 28px; font-weight: bold; color: #10b981;">{total_cost:,.0f} NOK</div>
-        <p style="margin-top: 10px; opacity: 0.9;">Estimert tidsbruk: {total_time_hours:.0f} timer ({total_time_hours/8:.1f} arbeidsdager)</p>
+    <div style="background: #374151; color: white; padding: 20px; border-radius: 6px; text-align: center; margin: 16px 0;">
+        <h3 style="color: white; margin-bottom: 8px; font-size: 16px; font-weight: 500;">Estimert kostnad</h3>
+        <div style="font-size: 32px; font-weight: 600;">{total_cost:,.0f} NOK</div>
+        <p style="margin-top: 8px; opacity: 0.9; font-size: 14px;">Estimert tidsbruk: {total_time_hours:.0f} timer ({total_time_hours/8:.1f} arbeidsdager)</p>
     </div>
     
-    <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
-        💡 Prisen inkluderer materialer, arbeid, utstyr, prosjektledelse og uforutsette kostnader. 
+    <p style="font-size: 14px; color: #6b7280; margin-top: 16px; line-height: 1.5;">
+        Prisen inkluderer materialer, arbeid, utstyr, prosjektledelse og uforutsette kostnader. 
         Faktiske priser kan variere ±15% avhengig av leverandør og kompleksitet.
     </p>
 </div>
 
-<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-    <h3 style="color: #856404; margin-bottom: 15px;">🤝 Ønsker du inntil 3 tilbud på badrenovering?</h3>
-    <p style="margin-bottom: 20px;">Vi kobler deg med kvalifiserte håndverkere som kan gi deg konkrete tilbud basert på dine ønsker.</p>
+<div style="background: #ffffff; border: 1px solid #e5e7eb; padding: 20px; border-radius: 6px; margin: 16px 0;">
+    <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Ønsker du tilbud på prosjektet?</h3>
+    <p style="margin-bottom: 16px; color: #6b7280; font-size: 14px;">Vi kobler deg med kvalifiserte håndverkere som kan gi deg konkrete tilbud basert på dine ønsker.</p>
     
     <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
-            style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 0 10px;">
-        💬 Få gratis tilbud
+            style="background: #374151; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; margin-right: 8px;">
+        Få tilbud
     </button>
     
     <button onclick="askQuestion('Jeg vil vite mer om kostnadene')" 
-            style="background: transparent; color: #856404; border: 2px solid #856404; padding: 13px 25px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 10px;">
-        📋 Flere detaljer
+            style="background: transparent; color: #374151; border: 1px solid #374151; padding: 11px 23px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+        Flere detaljer
     </button>
 </div>"""
         
@@ -816,38 +835,39 @@ class EnhancedRenovationAgent(BaseAgent):
     async def _handle_project_registration(self, analysis: Dict, query: str) -> Dict[str, Any]:
         """Håndterer prosjektregistrering direkte"""
         response = f"""
-<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
-    <h2 style="color: #1f2937; margin-bottom: 15px;">🏗️ Registrer ditt oppussingsprosjekt</h2>
+<div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid #374151;">
+    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Registrer ditt oppussingsprosjekt</h2>
     
-    <p style="margin-bottom: 20px;">Fantastisk at du vil registrere et prosjekt! Som din househacker-assistent hjelper jeg deg å komme i gang.</p>
+    <p style="margin-bottom: 20px; color: #374151; line-height: 1.6;">
+        Bra at du vil registrere et prosjekt! Vi hjelper deg komme i kontakt med kvalifiserte håndverkere.
+    </p>
     
-    <div style="background: #10b981; color: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: white; margin-bottom: 15px;">✅ Dette får du når du registrerer:</h3>
-        <ul style="margin-bottom: 20px;">
-            <li>🎯 Personlig oppfølging av ditt prosjekt</li>
-            <li>🏗️ Inntil 3 tilbud fra kvalifiserte håndverkere</li>
-            <li>📋 Gratis befaring og rådgivning</li>
-            <li>💰 Prissammenligning og forhandling</li>
-            <li>🔍 Kvalitetssikring gjennom hele prosessen</li>
-            <li>📞 Direkte kontakt med prosjektkoordinator</li>
+    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Dette får du:</h3>
+        <ul style="margin: 0; padding-left: 20px; color: #374151;">
+            <li style="margin-bottom: 6px;">Tilgang til vårt nettverk av håndverkere</li>
+            <li style="margin-bottom: 6px;">Sammenligning av tilbud</li>
+            <li style="margin-bottom: 6px;">Koordinering av prosjektet</li>
+            <li style="margin-bottom: 6px;">Kostnadsestimater basert på ditt prosjekt</li>
         </ul>
-        
-        <div style="text-align: center;">
-            <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
-                    style="background: white; color: #10b981; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 10px;">
-                🚀 Registrer prosjekt nå
-            </button>
-        </div>
     </div>
     
-    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
-        <h4 style="color: #1976d2; margin-bottom: 10px;">💡 Hvordan fungerer det?</h4>
-        <ol style="margin: 0; padding-left: 20px;">
-            <li>Du registrerer prosjektet ditt</li>
-            <li>Vi organiserer befaring med kvalifiserte håndverkere</li>
-            <li>Du får inntil 3 tilbud å sammenligne</li>
-            <li>Vi hjelper deg velge og koordinerer arbeidet</li>
+    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Prosessen:</h3>
+        <ol style="margin: 0; padding-left: 20px; color: #374151;">"""
+        
+        for step in self.COMPANY_INFO["process"]:
+            response += f"<li style='margin-bottom: 6px;'>{step}</li>"
+            
+        response += f"""
         </ol>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+                style="background: #374151; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+            Registrer prosjekt
+        </button>
     </div>
 </div>"""
         
@@ -858,41 +878,46 @@ class EnhancedRenovationAgent(BaseAgent):
         }
 
     async def _explain_househacker_services(self, analysis: Dict, query: str) -> Dict[str, Any]:
-        """Forklarer househacker sine tjenester"""
+        """Forklarer househacker sine tjenester basert på faktisk informasjon"""
         response = f"""
-<div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 4px solid #374151;">
-    <h2 style="color: #1f2937; margin-bottom: 15px;">🏡 Om househacker</h2>
+<div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid #374151;">
+    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Om househacker</h2>
     
-    <p style="margin-bottom: 20px;">househacker er din partner for oppussingsprosjekter. Vi gjør oppussing enkelt og trygt!</p>
+    <p style="margin-bottom: 20px; color: #374151; line-height: 1.6;">
+        {self.COMPANY_INFO["description"]} i {self.COMPANY_INFO["coverage_area"]}.
+    </p>
     
-    <div style="background: #ffffff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
-        <h3 style="color: #374151; margin-bottom: 15px;">🎯 Hva vi gjør:</h3>
-        <ul style="margin-bottom: 20px;">
-            <li>🔗 <strong>Kobler deg med kvalifiserte håndverkere</strong> - Kun sertifiserte fagfolk</li>
-            <li>📋 <strong>Prosjektkoordinering</strong> - Vi følger opp fra start til slutt</li>
-            <li>💰 <strong>Prissammenligning</strong> - Du får alltid konkurransedyktige priser</li>
-            <li>🔍 <strong>Kvalitetssikring</strong> - Vi sjekker at arbeidet holder høy standard</li>
-            <li>📞 <strong>Personlig oppfølging</strong> - Dedikert kontaktperson gjennom hele prosessen</li>
+    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Våre tjenester:</h3>
+        <ul style="margin: 0; padding-left: 20px; color: #374151;">"""
+        
+        for service in self.COMPANY_INFO["services"]:
+            response += f"<li style='margin-bottom: 6px;'>{service}</li>"
+        
+        response += f"""
         </ul>
     </div>
     
-    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0;">
-        <h4 style="color: #92400e; margin-bottom: 10px;">⚡ Hvorfor velge househacker?</h4>
-        <p style="margin: 0; font-size: 14px;">
-            Vi har hjulpet hundrevis av kunder med oppussing i Oslo-området. Vårt nettverk av håndverkere er nøye utvalgt, 
-            og alle prosjekter kommer med garanti. Du sparer tid, penger og stress!
-        </p>
+    <div style="background: #ffffff; padding: 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Slik fungerer det:</h3>
+        <ol style="margin: 0; padding-left: 20px; color: #374151;">"""
+        
+        for step in self.COMPANY_INFO["process"]:
+            response += f"<li style='margin-bottom: 6px;'>{step}</li>"
+        
+        response += f"""
+        </ol>
     </div>
     
-    <div style="text-align: center; margin-top: 20px;">
+    <div style="margin-top: 20px;">
         <button onclick="askQuestion('Jeg vil registrere et oppussingsprosjekt')" 
-                style="background: #1f2937; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 0 10px;">
-            🏗️ Registrer prosjekt
+                style="background: #374151; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; margin-right: 8px;">
+            Registrer prosjekt
         </button>
         
         <button onclick="askQuestion('Hva koster badrenovering?')" 
-                style="background: transparent; color: #1f2937; border: 2px solid #1f2937; padding: 13px 25px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 10px;">
-            💰 Se kostnader
+                style="background: transparent; color: #374151; border: 1px solid #374151; padding: 11px 23px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+            Se kostnader
         </button>
     </div>
 </div>"""
