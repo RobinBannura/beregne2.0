@@ -24,6 +24,205 @@ class EnhancedRenovationAgent(BaseAgent):
         self.db = SessionLocal()
         self.pricing_service = PricingService(self.db)
         
+        # Standardized styling for consistent appearance
+        self.BRAND_COLOR = "#1f2937"  # househacker brand color
+        self.LIGHT_BG = "#f9fafb"
+        self.WHITE_BG = "#ffffff"
+        self.BORDER_COLOR = "#e5e7eb"
+        self.TEXT_GRAY = "#6b7280"
+    
+    def _create_standard_response(self, title: str, total_cost: float, cost_details: str = "", 
+                                included_items: list = None, notes: str = "", 
+                                additional_info: str = "") -> str:
+        """Create a standardized response with consistent styling"""
+        included_items = included_items or []
+        cost_inc_vat = total_cost * 1.25
+        
+        # Included items section
+        included_section = ""
+        if included_items:
+            included_section = f"""
+    <div style="background: {self.WHITE_BG}; padding: 16px; border-radius: 6px; border: 1px solid {self.BORDER_COLOR}; margin: 16px 0;">
+        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Inkludert i prisen:</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+            {''.join([f'<div>• {item}</div>' for item in included_items])}
+        </div>
+    </div>"""
+        
+        response = f"""
+<div style="background: {self.LIGHT_BG}; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid {self.BRAND_COLOR};">
+    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">{title}</h2>
+    
+    <div style="background: {self.BRAND_COLOR}; color: white; padding: 20px; border-radius: 6px; text-align: center; margin: 16px 0;">
+        <h3 style="color: white; margin-bottom: 8px; font-size: 16px; font-weight: 500;">Estimert kostnad</h3>
+        <div style="font-size: 32px; font-weight: 600;">{total_cost:,.0f} NOK</div>
+        <div style="font-size: 18px; margin-top: 8px; opacity: 0.9;">eks. mva</div>
+        <div style="font-size: 20px; margin-top: 4px; font-weight: 500;">{cost_inc_vat:,.0f} NOK inkl. mva</div>
+        {cost_details}
+    </div>
+    {included_section}
+    {additional_info}
+    
+    <p style="font-size: 14px; color: {self.TEXT_GRAY}; margin-top: 16px; line-height: 1.5;">
+        {notes if notes else 'Basert på markedspriser Oslo/Viken 2025. Prisene kan variere ±10-15% avhengig av materialvalg og kompleksitet.'}
+    </p>
+</div>
+
+<div style="background: {self.WHITE_BG}; border: 1px solid {self.BORDER_COLOR}; padding: 20px; border-radius: 6px; margin: 16px 0;">
+    <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Vil du ha tilbud på dette prosjektet?</h3>
+    <p style="margin-bottom: 16px; color: {self.TEXT_GRAY}; font-size: 14px;">
+        Vi kobler deg med kvalifiserte håndverkere som kan gi deg konkrete tilbud basert på dine ønsker og behov.
+    </p>
+    
+    <button onclick="window.open('https://househacker.no/kontakt', '_blank')" 
+            style="background: {self.BRAND_COLOR}; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; margin-right: 8px;">
+        Få tilbud
+    </button>
+    
+    <button onclick="askQuestion('Jeg vil vite mer om kostnadene')" 
+            style="background: transparent; color: {self.BRAND_COLOR}; border: 1px solid {self.BRAND_COLOR}; padding: 11px 23px; border-radius: 6px; font-size: 14px; cursor: pointer;">
+        Flere detaljer
+    </button>
+</div>"""
+        
+        return response
+    
+    def _create_clarification_response(self, title: str, question: str, options: list) -> str:
+        """Create a standardized clarification question with options"""
+        options_html = ""
+        for i, option in enumerate(options):
+            options_html += f"""
+            <button onclick="askQuestion('{option['query']}')" 
+                    style="background: {self.WHITE_BG}; border: 2px solid {self.BRAND_COLOR}; color: {self.BRAND_COLOR}; 
+                           padding: 12px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; 
+                           margin: 4px; display: block; width: 100%; text-align: left; transition: all 0.2s;"
+                    onmouseover="this.style.background='{self.BRAND_COLOR}'; this.style.color='white';"
+                    onmouseout="this.style.background='{self.WHITE_BG}'; this.style.color='{self.BRAND_COLOR}';">
+                <strong>{option['title']}</strong><br>
+                <small style="opacity: 0.8;">{option['description']}</small>
+            </button>"""
+        
+        return f"""
+<div style="background: {self.LIGHT_BG}; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid {self.BRAND_COLOR};">
+    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">{title}</h2>
+    
+    <div style="background: {self.WHITE_BG}; padding: 20px; border-radius: 6px; border: 1px solid {self.BORDER_COLOR}; margin: 16px 0;">
+        <p style="color: #374151; margin-bottom: 16px; font-size: 16px;">{question}</p>
+        {options_html}
+    </div>
+    
+    <p style="font-size: 14px; color: {self.TEXT_GRAY}; margin-top: 16px; line-height: 1.5;">
+        Velg det alternativet som best beskriver ditt prosjekt, så gir jeg deg en nøyaktig kostnadsberegning.
+    </p>
+</div>"""
+    
+    def _is_ambiguous_query(self, query: str, analysis: Dict) -> bool:
+        """Detect if a query needs clarification"""
+        query_lower = query.lower()
+        
+        # Door-related ambiguity
+        if any(word in query_lower for word in ['dør', 'dører']):
+            # Check if it's clearly specified
+            if not any(word in query_lower for word in ['ytterdør', 'innerdør', 'dørblad', 'karm']):
+                return True
+        
+        # Window-related ambiguity  
+        if any(word in query_lower for word in ['vindu', 'vinduer']):
+            # Check if type is specified
+            if not any(word in query_lower for word in ['standard', 'premium', 'takvindu', 'panorama']):
+                # For basic window replacement, we can assume standard
+                return False
+        
+        # Kitchen ambiguity
+        if 'kjøkken' in query_lower:
+            if not any(word in query_lower for word in ['ikea', 'skreddersydd', 'midt-segment', 'komplett']):
+                return True
+                
+        return False
+    
+    async def _handle_ambiguous_query(self, query: str, analysis: Dict) -> Dict[str, Any]:
+        """Handle ambiguous queries with intelligent clarification"""
+        query_lower = query.lower()
+        
+        # Door clarification
+        if any(word in query_lower for word in ['dør', 'dører']):
+            # Extract number if present
+            import re
+            num_match = re.search(r'(\d+)', query_lower)
+            num_doors = num_match.group(1) if num_match else "X"
+            
+            options = [
+                {
+                    "title": f"Innerdører - kun dørblad ({num_doors} stk)",
+                    "description": "Skifte kun dørblad, beholde eksisterende karm. ~3,000 NOK per dør.",
+                    "query": f"skifte {num_doors} innerdører kun dørblad"
+                },
+                {
+                    "title": f"Innerdører - komplett med karm ({num_doors} stk)",
+                    "description": "Skifte hele døren inkl. karm og montering. ~5,000-7,000 NOK per dør.",
+                    "query": f"skifte {num_doors} innerdører komplett med karm"
+                },
+                {
+                    "title": f"Ytterdører ({num_doors} stk)",
+                    "description": "Skifte ytterdør(er) komplett. ~11,000-16,000 NOK per dør.",
+                    "query": f"skifte {num_doors} ytterdører"
+                }
+            ]
+            
+            response = self._create_clarification_response(
+                f"Dørskifte - {num_doors} dører",
+                "For å gi deg riktig pris trenger jeg å vite hvilken type dører du vil skifte:",
+                options
+            )
+            
+            return {
+                "response": response,
+                "agent_used": self.agent_name,
+                "requires_clarification": True,
+                "total_cost": 0
+            }
+        
+        # Kitchen clarification
+        if 'kjøkken' in query_lower:
+            options = [
+                {
+                    "title": "IKEA-nivå kjøkken",
+                    "description": "Standard løsning med grunnleggende hvitevarer. ~80,000-120,000 NOK.",
+                    "query": "kjøkken ikea nivå komplett"
+                },
+                {
+                    "title": "Midt-segment kjøkken",
+                    "description": "Bedre kvalitet (Sigdal/HTH-nivå). ~150,000-250,000 NOK.",
+                    "query": "kjøkken midt-segment komplett"
+                },
+                {
+                    "title": "Skreddersydd kjøkken",
+                    "description": "Premium løsning med custom design. ~200,000-500,000 NOK.",
+                    "query": "kjøkken skreddersydd komplett"
+                }
+            ]
+            
+            response = self._create_clarification_response(
+                "Kjøkkenrenovering",
+                "Hvilken type kjøkken planlegger du?",
+                options
+            )
+            
+            return {
+                "response": response,
+                "agent_used": self.agent_name,
+                "requires_clarification": True,
+                "total_cost": 0
+            }
+        
+        # Default fallback
+        return {
+            "response": "Kan du være litt mer spesifikk i spørsmålet ditt? Det hjelper meg å gi deg en mer nøyaktig kalkulasjon.",
+            "agent_used": self.agent_name,
+            "requires_clarification": True,
+            "total_cost": 0
+        }
+        
         # Faktabasert informasjon om househacker
         self.COMPANY_INFO = {
             "name": "househacker",
@@ -104,9 +303,13 @@ class EnhancedRenovationAgent(BaseAgent):
         }
 
     async def process(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Prosesserer oppussingsspørringer med full kostnadskalkulator"""
+        """Prosesserer oppussingsspørringer med hybrid AI-tilnærming"""
         try:
             analysis = self._analyze_renovation_query(query)
+            
+            # HYBRID AI: Check for ambiguous queries first
+            if self._is_ambiguous_query(query, analysis):
+                return await self._handle_ambiguous_query(query, analysis)
             
             if analysis["type"] == "full_project_estimate":
                 if analysis.get("project_type") == "kjøkken_detaljert":
@@ -2766,33 +2969,27 @@ class EnhancedRenovationAgent(BaseAgent):
                 unit_price = 9500
                 total_cost = unit_price * num_items
             
-            cost_inc_vat = total_cost * 1.25
+            # Use standardized response template
+            title = f"Vindusutskifting - {num_items} {'vindu' if num_items == 1 else 'vinduer'}"
+            cost_details = f'<p style="margin-top: 8px; opacity: 0.9; font-size: 14px;">Per vindu: {unit_price:,.0f} NOK</p>'
             
-            response = f"""
-<div style="background: #f9fafb; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid #1e40af;">
-    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Vindusutskifting - {num_items} {'vindu' if num_items == 1 else 'vinduer'}</h2>
-    
-    <div style="background: #1e40af; color: white; padding: 20px; border-radius: 6px; text-align: center; margin: 16px 0;">
-        <h3 style="color: white; margin-bottom: 8px; font-size: 16px; font-weight: 500;">Total kostnad</h3>
-        <div style="font-size: 32px; font-weight: 600;">{total_cost:,.0f} NOK</div>
-        <div style="font-size: 18px; margin-top: 8px; opacity: 0.9;">eks. mva</div>
-        <div style="font-size: 20px; margin-top: 4px; font-weight: 500;">{cost_inc_vat:,.0f} NOK inkl. mva</div>
-        <p style="margin-top: 8px; opacity: 0.9; font-size: 14px;">Per vindu: {unit_price:,.0f} NOK</p>
-    </div>
-    
-    <div style="background: #ffffff; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb; margin: 16px 0;">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Inkludert i prisen:</h3>
-        <div>• Nye vinduer (standard kvalitet)</div>
-        <div>• Demontering av gamle vinduer</div>
-        <div>• Montering og tilpasning</div>
-        <div>• Tetting og isolering</div>
-        <div>• Opprydding og bortkjøring</div>
-    </div>
-    
-    <p style="font-size: 14px; color: #6b7280; margin-top: 16px; line-height: 1.5;">
-        Basert på markedspriser Oslo/Viken 2025. Energieffektive vinduer kan redusere oppvarmingskostnadene med 20-30%.
-    </p>
-</div>"""
+            included_items = [
+                "Nye vinduer (standard kvalitet)",
+                "Demontering av gamle vinduer", 
+                "Montering og tilpasning",
+                "Tetting og isolering",
+                "Opprydding og bortkjøring"
+            ]
+            
+            notes = "Basert på markedspriser Oslo/Viken 2025. Energieffektive vinduer kan redusere oppvarmingskostnadene med 20-30%."
+            
+            response = self._create_standard_response(
+                title=title,
+                total_cost=total_cost,
+                cost_details=cost_details,
+                included_items=included_items,
+                notes=notes
+            )
             
             return {
                 "response": response,
