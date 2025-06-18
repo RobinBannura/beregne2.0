@@ -267,12 +267,35 @@ Examples:
                     "confidence": 0.7
                 })
         
-        # Extract area
-        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:m²|m2|kvadratmeter|kvm)', query_lower)
-        if area_match:
-            analysis["area"] = float(area_match.group(1))
+        # Extract area (improved patterns for contextual responses)
+        area_patterns = [
+            r'(\d+(?:\.\d+)?)\s*(?:m²|m2|kvadratmeter|kvm)',  # Standard patterns
+            r'(\d+(?:\.\d+)?)\s*kvadrat',  # "5 kvadrat"
+            r'(?:^|\s)(\d+(?:\.\d+)?)\s*(?:og|,)?\s*(?:standard|kvalitet|normal)',  # "5 og standard" or "5 normal"
+            r'(?:standard|kvalitet|normal).*?(\d+(?:\.\d+)?)\s*(?:m²|m2|kvm)?',  # "standard 5 kvm" or "Normal standard og 5"
+            r'(\d+(?:\.\d+)?)\s*(?:og|,)?\s*(?:m²|m2|kvm|kvadrat)',  # "5 og kvm"
+            r'(?:normal|standard|kvalitet)\s+(?:standard\s+)?(?:og\s+)?(\d+(?:\.\d+)?)',  # "Normal standard og 5"
+        ]
+        
+        area_value = None
+        for pattern in area_patterns:
+            area_match = re.search(pattern, query_lower)
+            if area_match:
+                area_value = float(area_match.group(1))
+                break
+        
+        if area_value:
+            analysis["area"] = area_value
             analysis["type"] = "full_project_estimate"
-            analysis["confidence"] = 0.7
+            analysis["confidence"] = 0.8
+            
+            # If we also detect quality level, this is a complete response
+            if any(word in query_lower for word in ['standard', 'kvalitet', 'høy', 'enkel', 'normal']):
+                analysis["quality_level"] = self._extract_quality_level(query_lower)
+                analysis["needs_clarification"] = False
+                analysis["is_ambiguous"] = False
+                analysis["type"] = "full_project_estimate"
+                analysis["confidence"] = 0.9
         
         # Extract quantity
         qty_match = re.search(r'(\d+)\s*(?:stk|vindu|vinduer|dør|dører)', query_lower)
@@ -341,6 +364,17 @@ Respond with JSON array of questions:
         
         # Fallback questions based on missing info
         return self._generate_fallback_questions(analysis)
+    
+    def _extract_quality_level(self, query_lower: str) -> str:
+        """Extract quality level from query"""
+        if any(word in query_lower for word in ['normal', 'standard']):
+            return "mid"
+        elif any(word in query_lower for word in ['høy', 'premium', 'luksus', 'dyr']):
+            return "premium"
+        elif any(word in query_lower for word in ['enkel', 'billig', 'rimelig', 'budget']):
+            return "budget"
+        else:
+            return "mid"  # Default to mid range
     
     def _generate_fallback_questions(self, analysis: Dict[str, Any]) -> List[str]:
         """Generate fallback questions when AI fails"""
