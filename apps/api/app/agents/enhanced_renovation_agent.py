@@ -458,16 +458,17 @@ class EnhancedRenovationAgent(BaseAgent):
             stored_session = None
             ai_context = ""
             
-            if self.session_memory:
-                try:
-                    stored_session = self.session_memory.extract_and_store_context(session_id, query)
-                    ai_context = self.session_memory.get_context_for_ai(session_id)
-                except Exception as e:
-                    print(f"Session memory error: {e}")
-            
             # AI-powered analysis with context (with fallback)
             if self.ai_analyzer:
                 try:
+                    # First get initial context
+                    if self.session_memory:
+                        try:
+                            ai_context = self.session_memory.get_context_for_ai(session_id)
+                        except Exception as e:
+                            print(f"Session memory error getting context: {e}")
+                            ai_context = ""
+                    
                     analysis = await self.ai_analyzer.analyze_query(query, ai_context)
                 except Exception as e:
                     print(f"AI analysis error: {e}")
@@ -476,6 +477,15 @@ class EnhancedRenovationAgent(BaseAgent):
             else:
                 # Use old regex analysis
                 analysis = self._analyze_renovation_query(query, ai_context)
+            
+            # Now store context with analysis results
+            if self.session_memory:
+                try:
+                    stored_session = self.session_memory.extract_and_store_context(session_id, query, analysis)
+                    # Refresh context after storing
+                    ai_context = self.session_memory.get_context_for_ai(session_id)
+                except Exception as e:
+                    print(f"Session memory error storing context: {e}")
             
             # HYBRID AI: Check for ambiguous queries first
             if analysis.get("is_ambiguous") or analysis.get("needs_clarification"):
@@ -489,6 +499,9 @@ class EnhancedRenovationAgent(BaseAgent):
             }
             
             if analysis["type"] == "full_project_estimate":
+                # Log analysis details for debugging
+                print(f"Full project estimate - Project type: {analysis.get('project_type')}, Area: {analysis.get('area')}")
+                
                 if analysis.get("project_type") == "kjøkken_detaljert":
                     result = await self._provide_kitchen_breakdown(analysis, query, handler_context)
                 elif analysis.get("project_type") == "vinduer_dorer":
@@ -547,8 +560,18 @@ class EnhancedRenovationAgent(BaseAgent):
         project_type = analysis.get("project_type", "bad_komplett")
         area = analysis.get("area", 10)
         
+        # Smart detection: If we have area + quality but unclear project type,
+        # and session context suggests bathroom, assume bathroom project
+        if not project_type or project_type == "needs_clarification":
+            ai_context = context.get("ai_context", "") if context else ""
+            if "Project: bad" in ai_context and area and area <= 15:
+                print(f"Smart detection: Converting to bathroom project based on context")
+                project_type = "bad_komplett"
+                analysis["project_type"] = "bad_komplett"
+        
         # Route bathroom projects to new database-driven calculation
         if project_type == "bad_komplett":
+            print(f"Routing to bathroom calculation: project_type={project_type}, area={area}")
             return await self._calculate_bathroom_project(analysis, query)
         
         project_config = self.PROJECT_TYPES.get(project_type)

@@ -341,8 +341,26 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
     def _create_general_conversational_response(self, query: str) -> Dict[str, Any]:
         """Create a general conversational response for unclear queries"""
         
+        query_lower = query.lower()
+        
+        # Handle questions about the agent's identity
+        if any(phrase in query_lower for phrase in ['hvem er du', 'hva er du', 'kan du presentere', 'fortell om deg']):
+            response = "Hei! Jeg er househacker-assistenten din 👋 Jeg hjelper deg med oppussingsprosjekter - fra prisanslag til å finne kvalifiserte håndverkere. Jeg kan gi deg kostnadsestimater for bad, kjøkken, maling og mye mer. Har du et oppussingsprosjekt du tenker på?"
+        
+        # Handle general help questions
+        elif any(phrase in query_lower for phrase in ['hjelp', 'kan du hjelpe', 'hva kan du']):
+            response = "Jeg kan hjelpe deg med oppussingsprosjekter! 🔨 Jeg gir deg prisanslag, råd om materialer og kan koble deg med kvalifiserte entreprenører. Bare fortell meg hva du skal pusse opp - bad, kjøkken, maling eller noe annet?"
+        
+        # Handle househacker questions
+        elif 'househacker' in query_lower:
+            response = "househacker hjelper folk med oppussingsprosjekter! Vi gir prisanslag og kobler deg med kvalitetssikrede entreprenører i Oslo-området. Jeg er din digitale assistent som kan hjelpe deg komme i gang. Hva skal du pusse opp?"
+        
+        # Default greeting
+        else:
+            response = "Hei! Jeg er househacker-assistenten din og brenner for oppussing. Har du et prosjekt du tenker på? Jeg kan hjelpe deg med både prisanslag og å finne gode entreprenører. Bare fortell meg hva du har lyst til å gjøre! 😊"
+        
         return {
-            "response": "Hei! Jeg er househacker-assistenten din og brenner for oppussing. Har du et prosjekt du tenker på? Jeg kan hjelpe deg med både prisanslag og å finne gode entreprenører. Bare fortell meg hva du har lyst til å gjøre! 😊",
+            "response": response,
             "agent_used": self.agent_name,
             "conversation_stage": "greeting",
             "personality_applied": True,
