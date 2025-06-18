@@ -15,9 +15,11 @@ class AIQueryAnalyzer:
     """
     
     def __init__(self, agent_name: str = "renovation"):
-        # Load agent-specific API key
+        # Load agent-specific API key and strip any whitespace/newlines
         api_key_env = f"OPENAI_API_KEY_{agent_name.upper()}"
         self.api_key = os.getenv(api_key_env)
+        if self.api_key:
+            self.api_key = self.api_key.strip()
         self.agent_name = agent_name
         # Don't require API key at init - allow fallback to regex analysis
     

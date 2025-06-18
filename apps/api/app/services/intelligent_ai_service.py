@@ -17,9 +17,11 @@ class IntelligentAIService:
     def __init__(self, agent_name: str = "renovation"):
         self.agent_name = agent_name
         
-        # Load agent-specific API key
+        # Load agent-specific API key and strip any whitespace/newlines
         api_key_env = f"OPENAI_API_KEY_{agent_name.upper()}"
         self.api_key = os.getenv(api_key_env)
+        if self.api_key:
+            self.api_key = self.api_key.strip()
         
         if not self.api_key:
             print(f"Warning: No OpenAI API key found for agent '{agent_name}'. AI features will be disabled.")

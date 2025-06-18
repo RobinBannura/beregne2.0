@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Beregne 2.0 API",
     description="AI-Powered Calculator Platform for Norway",
-    version="2.0.7",  # Force Railway redeploy - contextual bathroom pricing fix NOW
+    version="2.0.8",  # Fix OpenAI API key newlines causing HTTP header errors
     docs_url="/docs",
     redoc_url="/redoc"
 )
