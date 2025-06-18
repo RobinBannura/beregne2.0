@@ -231,19 +231,22 @@ async def debug_database(db: Session = Depends(get_db)):
         from .services.ai_query_analyzer import AIQueryAnalyzer
         import os
         
-        pricing_service = PricingService(db)
-        ai_analyzer = AIQueryAnalyzer(agent_name="renovation")
-        
-        # Check what tables exist
+        # Check what tables exist first
         from sqlalchemy import text
         tables_result = db.execute(text("SELECT name FROM sqlite_master WHERE type='table';"))
         existing_tables = [row[0] for row in tables_result.fetchall()]
         
-        # Test pricing service (will fail if no tables)
-        try:
-            bathroom_price = pricing_service.get_service_price("bad_totalrenovering_8m2")
-        except Exception as e:
-            bathroom_price = {"error": str(e)}
+        # Only test pricing service if tables exist
+        if "service_types" in existing_tables and "prices" in existing_tables:
+            pricing_service = PricingService(db)
+            try:
+                bathroom_price = pricing_service.get_service_price("bad_totalrenovering_8m2")
+            except Exception as e:
+                bathroom_price = {"error": str(e)}
+        else:
+            bathroom_price = {"error": "Pricing tables missing"}
+        
+        ai_analyzer = AIQueryAnalyzer(agent_name="renovation")
         
         # Test AI analyzer
         test_analysis = await ai_analyzer.analyze_query("standard kvalitet og 5 kvm")
