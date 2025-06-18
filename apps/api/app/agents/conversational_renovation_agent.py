@@ -122,6 +122,9 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
             result = await self._handle_registration_flow(query, context, registration_stage)
         elif self._wants_to_register(query):
             result = await self._start_registration_flow(query, context)
+        elif self._is_identity_or_general_question(query):
+            # Handle identity and general questions directly
+            result = self._create_general_conversational_response(query)
         else:
             # First, get the technical analysis and pricing from parent class
             try:
@@ -393,6 +396,18 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         ]
         
         return any(keyword in query_lower for keyword in registration_keywords)
+    
+    def _is_identity_or_general_question(self, query: str) -> bool:
+        """Check if this is a question about the agent's identity or general capabilities"""
+        query_lower = query.lower()
+        
+        identity_keywords = [
+            'hvem er du', 'hva er du', 'kan du presentere', 'fortell om deg',
+            'hjelp', 'kan du hjelpe', 'hva kan du', 'househacker',
+            'info', 'informasjon', 'assistenten'
+        ]
+        
+        return any(keyword in query_lower for keyword in identity_keywords)
     
     async def _start_registration_flow(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Start the registration flow"""
