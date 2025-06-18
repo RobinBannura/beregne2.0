@@ -22,10 +22,14 @@ class IntelligentAIService:
         self.api_key = os.getenv(api_key_env)
         
         if not self.api_key:
-            raise ValueError(f"No OpenAI API key found for agent '{agent_name}'. Please set {api_key_env}")
+            print(f"Warning: No OpenAI API key found for agent '{agent_name}'. AI features will be disabled.")
+            self.api_key = None
         
-        # Initialize OpenAI client
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # Initialize OpenAI client only if API key is available
+        if self.api_key:
+            self.client = openai.OpenAI(api_key=self.api_key)
+        else:
+            self.client = None
         
         # Conversation context for this agent
         self.context = {
@@ -54,6 +58,14 @@ class IntelligentAIService:
         """
         Generate intelligent follow-up questions based on user query and context
         """
+        
+        # Check if OpenAI client is available
+        if not self.client:
+            return {
+                "success": False,
+                "error": "OpenAI API not available",
+                "fallback_question": self._get_fallback_question(project_type, user_query)
+            }
         
         try:
             # Build context for the AI

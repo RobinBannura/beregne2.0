@@ -71,9 +71,18 @@ async def startup_event():
     """Initialize services on startup"""
     logger.info("🚀 Starting Beregne 2.0 API...")
     
-    # Create database tables
-    create_tables()
-    logger.info("📊 Database initialized")
+    # Create database tables (including new conversation tables)
+    try:
+        create_tables()
+        
+        # Ensure conversation learning tables exist
+        from .models.conversation import ConversationSession, ConversationMessage, ConversationPattern, Base
+        Base.metadata.create_all(bind=SessionLocal().bind)
+        
+        logger.info("📊 Database initialized with all tables")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        # Continue anyway - app might still work without conversation learning
     
     # Initialize default partners
     try:
