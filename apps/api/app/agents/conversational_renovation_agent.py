@@ -126,24 +126,19 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
             # Handle identity and general questions directly
             result = self._create_general_conversational_response(query)
         else:
+            # Check if this might be a contextual response and enhance with session memory
+            enhanced_query = await self._enhance_query_with_context(query, context)
+            
             # First, get the technical analysis and pricing from parent class
             try:
-                technical_result = await super().process(query, context)
+                technical_result = await super().process(enhanced_query, context)
                 if not technical_result:
-                    technical_result = {
-                        "response": "Jeg forstod ikke spørsmålet helt. Kan du prøve å omformulere det?",
-                        "requires_clarification": False,
-                        "total_cost": 0,
-                        "agent_used": self.agent_name
-                    }
+                    # Try intelligent contextual processing if parent failed
+                    technical_result = await self._handle_contextual_response(query, context)
             except Exception as e:
                 print(f"Parent process failed: {e}")
-                technical_result = {
-                    "response": "Det oppstod en teknisk feil. Kan du prøve igjen?",
-                    "requires_clarification": False, 
-                    "total_cost": 0,
-                    "agent_used": self.agent_name
-                }
+                # Try intelligent contextual processing as fallback
+                technical_result = await self._handle_contextual_response(query, context)
             
             # Then wrap it in conversational response
             result = await self._create_conversational_response(
@@ -168,6 +163,84 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
                 print(f"Failed to log message exchange: {e}")
         
         return result
+    
+    async def _enhance_query_with_context(self, query: str, context: Dict[str, Any] = None) -> str:
+        """Enhance query with session memory context for better understanding"""
+        if not context:
+            return query
+            
+        session = context.get("session")
+        if not session:
+            return query
+            
+        try:
+            # Get recent conversation history from session memory
+            memory = session.get_memory()
+            if not memory:
+                return query
+                
+            # Look for recent renovation/project context
+            recent_context = []
+            for key, value in memory.items():
+                if any(keyword in key.lower() for keyword in ['project', 'renovation', 'bad', 'kjøkken', 'tak', 'gulv']):
+                    recent_context.append(f"{key}: {value}")
+            
+            # If we have recent project context, combine it with current query
+            if recent_context:
+                context_info = "; ".join(recent_context)
+                enhanced = f"{context_info}. Bruker sier nå: {query}"
+                print(f"Enhanced query with context: {enhanced}")
+                return enhanced
+                
+        except Exception as e:
+            print(f"Error enhancing query with context: {e}")
+            
+        return query
+    
+    async def _handle_contextual_response(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Handle contextual responses using AI analysis and session memory"""
+        try:
+            # Use AI analyzer to understand the query
+            if self.ai_analyzer:
+                analysis = await self.ai_analyzer.analyze_query(query)
+                project_type = analysis.get("project_type")
+                area = analysis.get("area")
+                
+                # If AI detected a project type and area, try to get pricing
+                if project_type and area:
+                    print(f"AI detected contextual response: {project_type}, {area}m²")
+                    
+                    # Try to get pricing for detected project
+                    if hasattr(self, 'pricing_service') and self.pricing_service:
+                        pricing_result = self.pricing_service.calculate_renovation_cost(
+                            project_type=project_type,
+                            area=area,
+                            quality_level="standard"  # Default for contextual responses
+                        )
+                        
+                        if pricing_result and pricing_result.get("total_cost", 0) > 0:
+                            return {
+                                "response": f"Basert på {area}m² {project_type} med standard kvalitet",
+                                "requires_clarification": False,
+                                "total_cost": pricing_result["total_cost"],
+                                "calculation_details": {
+                                    "project_type": project_type,
+                                    "area": area,
+                                    "quality_level": "standard"
+                                },
+                                "agent_used": self.agent_name,
+                                "contextual_processing": True
+                            }
+        except Exception as e:
+            print(f"Error in contextual processing: {e}")
+        
+        # Fallback for when contextual processing fails
+        return {
+            "response": "Jeg forstod ikke spørsmålet helt. Kan du prøve å omformulere det?",
+            "requires_clarification": False,
+            "total_cost": 0,
+            "agent_used": self.agent_name
+        }
     
     async def _create_conversational_response(
         self, 

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Beregne 2.0 API",
     description="AI-Powered Calculator Platform for Norway",
-    version="2.0.4",  # Add admin endpoint to manually initialize bathroom pricing
+    version="2.0.5",  # Fix contextual response understanding with session memory
     docs_url="/docs",
     redoc_url="/redoc"
 )
