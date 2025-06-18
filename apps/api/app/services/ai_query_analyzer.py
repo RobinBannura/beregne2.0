@@ -193,9 +193,9 @@ Examples:
         # Check if context indicates we're discussing a specific project type
         context_project_type = None
         if context:
-            if "Project: bad" in context:
+            if "Project: bad_komplett" in context or "Project: bad" in context:
                 context_project_type = "bad_komplett"
-            elif "Project: kjøkken" in context:
+            elif "Project: kjøkken_detaljert" in context or "Project: kjøkken" in context:
                 context_project_type = "kjøkken_detaljert"
             elif "Project: maling" in context:
                 context_project_type = "maling"

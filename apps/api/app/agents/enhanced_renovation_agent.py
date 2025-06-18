@@ -564,7 +564,7 @@ class EnhancedRenovationAgent(BaseAgent):
         # and session context suggests bathroom, assume bathroom project
         if not project_type or project_type == "needs_clarification":
             ai_context = context.get("ai_context", "") if context else ""
-            if "Project: bad" in ai_context and area and area <= 15:
+            if ("Project: bad_komplett" in ai_context or "Project: bad" in ai_context) and area and area <= 15:
                 print(f"Smart detection: Converting to bathroom project based on context")
                 project_type = "bad_komplett"
                 analysis["project_type"] = "bad_komplett"

@@ -176,16 +176,16 @@ class SessionMemoryService:
         if analysis and analysis.get('project_type'):
             result['type'] = analysis['project_type']
         else:
-            # Pattern-based extraction
+            # Pattern-based extraction (use same naming as AI analysis)
             project_patterns = [
-                (r'bad|baderom', 'bad'),
-                (r'kjøkken', 'kjøkken'),
+                (r'bad|baderom', 'bad_komplett'),
+                (r'kjøkken', 'kjøkken_detaljert'),
                 (r'mal\w+|maling', 'maling'),
-                (r'gulv|parkett|laminat|fliser', 'gulv'),
-                (r'elektriker|elektrisk', 'elektriker'),
+                (r'gulv|parkett|laminat|fliser', 'gulvarbeider'),
+                (r'elektriker|elektrisk', 'elektriker_arbeid'),
                 (r'vinduer?|dører?', 'vinduer_dorer'),
-                (r'tak|takarbeid', 'tak'),
-                (r'isolering|isolasjon', 'isolasjon')
+                (r'tak|takarbeid', 'tak_ytterkledning'),
+                (r'isolering|isolasjon', 'isolasjon_tetting')
             ]
             
             for pattern, project_type in project_patterns:
