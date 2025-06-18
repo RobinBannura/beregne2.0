@@ -3,6 +3,10 @@ import httpx
 import json
 import re
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class AIQueryAnalyzer:
     """
@@ -10,8 +14,11 @@ class AIQueryAnalyzer:
     Replaces regex-based analysis with intelligent understanding
     """
     
-    def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
+    def __init__(self, agent_name: str = "renovation"):
+        # Load agent-specific API key
+        api_key_env = f"OPENAI_API_KEY_{agent_name.upper()}"
+        self.api_key = os.getenv(api_key_env)
+        self.agent_name = agent_name
         # Don't require API key at init - allow fallback to regex analysis
     
     async def analyze_query(self, query: str, context: str = "") -> Dict[str, Any]:

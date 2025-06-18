@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from .enhanced_renovation_agent import EnhancedRenovationAgent
 from ..services.project_registration_service import ProjectRegistrationService, RegistrationStage
+from ..services.intelligent_ai_service import IntelligentAIService
 
 class ConversationalRenovationAgent(EnhancedRenovationAgent):
     """
@@ -17,8 +18,15 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         super().__init__()
         self.agent_name = "conversational_renovation"
         
-        # Initialize registration service
+        # Initialize services
         self.registration_service = ProjectRegistrationService()
+        
+        # Initialize intelligent AI service for smart follow-ups
+        try:
+            self.intelligent_ai = IntelligentAIService(agent_name="renovation")
+        except Exception as e:
+            print(f"Intelligent AI service initialization failed: {e}")
+            self.intelligent_ai = None
         
         # Conversation state tracking
         self.conversation_stages = [
@@ -120,7 +128,7 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         project_type = technical_result.get("calculation_details", {}).get("project_type", "")
         
         if technical_result.get("requires_clarification"):
-            return self._wrap_clarification_conversationally(
+            return await self._wrap_clarification_conversationally(
                 technical_result, query, project_type
             )
         
@@ -150,35 +158,56 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         
         return "needs_assessment"
     
-    def _wrap_clarification_conversationally(
+    async def _wrap_clarification_conversationally(
         self, 
         technical_result: Dict[str, Any], 
         query: str, 
         project_type: str
     ) -> Dict[str, Any]:
-        """Wrap technical clarification in conversational tone"""
+        """Wrap technical clarification in conversational tone using AI"""
         
         # Create a simple, natural response
         if "bad" in query.lower():
             intro = "Badrenovering er en god investering! 😊"
         elif "kjøkken" in query.lower():
             intro = "Kjøkken er hjertet i hjemmet."
+        elif "mal" in query.lower():
+            intro = "Maling kan virkelig transformere hjemmet!"
         else:
             intro = "Det høres ut som et spennende prosjekt!"
         
-        # Get clarification details from technical result
-        clarification_details = technical_result.get("clarification_details", {})
-        questions = clarification_details.get("questions", [])
+        # Use AI for intelligent follow-up if available
+        if self.intelligent_ai:
+            try:
+                ai_response = await self.intelligent_ai.generate_intelligent_followup(
+                    user_query=query,
+                    project_type=project_type,
+                    missing_info=technical_result.get("missing_info", [])
+                )
+                
+                if ai_response.get("success"):
+                    follow_up = ai_response.get("follow_up_question", "")
+                    conversational_response = f"{intro} {follow_up}"
+                    
+                    return {
+                        **technical_result,
+                        "response": conversational_response,
+                        "conversation_stage": "pricing_discussion",
+                        "personality_applied": True,
+                        "ai_powered": True,
+                        "ai_reasoning": ai_response.get("reasoning", "")
+                    }
+            except Exception as e:
+                print(f"AI follow-up failed: {e}")
         
-        # Create simple conversational response with helpful questions
+        # Fallback to simple questions
         response_parts = [intro]
         
         if "bad" in query.lower():
             response_parts.append("For å gi deg et godt prisestimat trenger jeg å vite:")
             response_parts.append("Hvor stort er badet i kvadratmeter? Og tenker du standard kvalitet, høy standard eller enkel standard?")
-        elif questions:
-            response_parts.append("For å gi deg et godt prisestimat trenger jeg å vite:")
-            response_parts.extend([f"- {q}" for q in questions])
+        elif "mal" in query.lower():
+            response_parts.append("Er dette innvendig eller utvendig maling du tenker på?")
         else:
             response_parts.append("Kan du fortelle meg hvor stort det er og hva slags standard du tenker deg?")
         

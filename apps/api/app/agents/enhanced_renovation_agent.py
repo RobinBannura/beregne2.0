@@ -34,7 +34,7 @@ class EnhancedRenovationAgent(BaseAgent):
             self.session_memory = None
         
         try:
-            self.ai_analyzer = AIQueryAnalyzer()
+            self.ai_analyzer = AIQueryAnalyzer(agent_name="renovation")
         except Exception as e:
             print(f"AI analyzer initialization failed: {e}")
             self.ai_analyzer = None
