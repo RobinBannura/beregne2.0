@@ -25,8 +25,19 @@ class EnhancedRenovationAgent(BaseAgent):
         # Initialize services
         self.db = SessionLocal()
         self.pricing_service = PricingService(self.db)
-        self.session_memory = SessionMemoryService(self.db)
-        self.ai_analyzer = AIQueryAnalyzer()
+        
+        # Initialize optional services with fallback
+        try:
+            self.session_memory = SessionMemoryService(self.db)
+        except Exception as e:
+            print(f"Session memory initialization failed: {e}")
+            self.session_memory = None
+        
+        try:
+            self.ai_analyzer = AIQueryAnalyzer()
+        except Exception as e:
+            print(f"AI analyzer initialization failed: {e}")
+            self.ai_analyzer = None
         
         # Standardized styling for consistent appearance
         self.BRAND_COLOR = "#1f2937"  # househacker brand color
@@ -226,12 +237,20 @@ class EnhancedRenovationAgent(BaseAgent):
     async def _handle_ai_clarification(self, query: str, analysis: Dict, session_id: str = None, context: str = "") -> Dict[str, Any]:
         """Handle ambiguous queries with AI-generated clarification questions"""
         
-        # Generate intelligent follow-up questions using AI
-        followup_questions = await self.ai_analyzer.generate_followup_questions(query, analysis, context)
+        # Generate intelligent follow-up questions using AI (if available)
+        followup_questions = []
+        if self.ai_analyzer:
+            try:
+                followup_questions = await self.ai_analyzer.generate_followup_questions(query, analysis, context)
+            except Exception as e:
+                print(f"AI follow-up questions failed: {e}")
         
-        # Update session memory with clarification needs
-        if session_id:
-            self.session_memory.update_followup_needs(session_id, analysis.get("missing_info", []))
+        # Update session memory with clarification needs (if available)
+        if session_id and self.session_memory:
+            try:
+                self.session_memory.update_followup_needs(session_id, analysis.get("missing_info", []))
+            except Exception as e:
+                print(f"Session memory update failed: {e}")
         
         # If we have specific clarification options (like doors), use those
         if analysis.get("project_type") == "vinduer_dorer" and "door_type" in analysis.get("missing_info", []):
@@ -435,14 +454,28 @@ class EnhancedRenovationAgent(BaseAgent):
                 import hashlib
                 session_id = hashlib.md5(f"{query}_{datetime.now().isoformat()}".encode()).hexdigest()[:16]
             
-            # Store context information in session memory
-            stored_session = self.session_memory.extract_and_store_context(session_id, query)
+            # Store context information in session memory (if available)
+            stored_session = None
+            ai_context = ""
             
-            # Get AI context for enhanced analysis
-            ai_context = self.session_memory.get_context_for_ai(session_id)
+            if self.session_memory:
+                try:
+                    stored_session = self.session_memory.extract_and_store_context(session_id, query)
+                    ai_context = self.session_memory.get_context_for_ai(session_id)
+                except Exception as e:
+                    print(f"Session memory error: {e}")
             
-            # AI-powered analysis with context
-            analysis = await self.ai_analyzer.analyze_query(query, ai_context)
+            # AI-powered analysis with context (with fallback)
+            if self.ai_analyzer:
+                try:
+                    analysis = await self.ai_analyzer.analyze_query(query, ai_context)
+                except Exception as e:
+                    print(f"AI analysis error: {e}")
+                    # Fallback to old regex analysis
+                    analysis = self._analyze_renovation_query(query, ai_context)
+            else:
+                # Use old regex analysis
+                analysis = self._analyze_renovation_query(query, ai_context)
             
             # HYBRID AI: Check for ambiguous queries first
             if analysis.get("is_ambiguous") or analysis.get("needs_clarification"):

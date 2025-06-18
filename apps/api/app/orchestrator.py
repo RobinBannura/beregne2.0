@@ -27,6 +27,8 @@ class AgentOrchestrator:
             
         except Exception as e:
             logger.error(f"Error initializing agents: {str(e)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
     
     async def route_query(self, query: str, context: Dict[str, Any] = None, partner_config: Dict[str, Any] = None) -> Dict[str, Any]:
         """
