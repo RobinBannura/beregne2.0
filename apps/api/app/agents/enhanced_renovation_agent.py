@@ -314,6 +314,8 @@ class EnhancedRenovationAgent(BaseAgent):
             if analysis["type"] == "full_project_estimate":
                 if analysis.get("project_type") == "kjøkken_detaljert":
                     result = await self._provide_kitchen_breakdown(analysis, query)
+                elif analysis.get("project_type") == "vinduer_dorer":
+                    result = await self._handle_windows_doors_work(analysis, query)
                 else:
                     result = await self._calculate_full_project(analysis, query)
             elif analysis["type"] == "material_and_labor":
@@ -2800,9 +2802,11 @@ class EnhancedRenovationAgent(BaseAgent):
             query_lower = query.lower()
             
             # Extract number of windows/doors - more flexible patterns
-            num_match = re.search(r'(\d+)\s*(?:stk|vindu|vinduer|dør|dører)', query_lower)
+            num_match = re.search(r'(\d+)\s*(?:stk|vindu|vinduer|dør|dører|innerdør|innerdører|ytterdør)', query_lower)
             if not num_match:
-                num_match = re.search(r'bytte\s*(\d+)\s*vindu', query_lower)
+                num_match = re.search(r'bytte\s*(\d+)\s*(?:vindu|dør)', query_lower)
+            if not num_match:
+                num_match = re.search(r'skifte\s*(\d+)\s*(?:vindu|dør|innerdør)', query_lower)
             if not num_match:
                 num_match = re.search(r'(\d+)', query_lower)
             num_items = int(num_match.group(1)) if num_match else 1
@@ -3020,18 +3024,8 @@ class EnhancedRenovationAgent(BaseAgent):
                 unit_price = 3000  # Average for door leaf only
                 service_name = "innerdor_standard_komplett"
             
-            # Try to get database pricing
-            try:
-                result = self.pricing_service.get_service_price(service_name, area=num_items)
-            except:
-                result = {"error": "Database not available"}
-            
-            if "error" not in result:
-                total_cost = result.get("total_cost", {}).get("recommended", 0)
-                unit_price = result.get("unit_price", {}).get("recommended_price", 0)
-            else:
-                # Use fallback pricing
-                total_cost = unit_price * num_items
+            # Use fallback pricing (database service not available for doors yet)
+            total_cost = unit_price * num_items
             
             # Create standardized response
             title = f"Innerdører - {num_items} {'dør' if num_items == 1 else 'dører'}"
@@ -3069,7 +3063,7 @@ class EnhancedRenovationAgent(BaseAgent):
                 "total_cost": total_cost,
                 "num_doors": num_items,
                 "cost_per_door": unit_price,
-                "pricing_source": "database" if "error" not in result else "fallback"
+                "pricing_source": "fallback"
             }
             
         except Exception as e:
