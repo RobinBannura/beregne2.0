@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Beregne 2.0 API",
     description="AI-Powered Calculator Platform for Norway",
-    version="2.0.2",  # Force Railway redeploy with fixed bathroom pricing
+    version="2.0.3",  # Fix pricing data initialization with correct foreign keys
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -108,16 +108,30 @@ async def startup_event():
                     service = ServiceType(**service_data)
                     db.add(service)
                 
-                # Create bathroom pricing data
+                # Commit service types first so they have IDs for foreign key relationships
+                db.commit()
+                
+                # Create bathroom pricing data with correct foreign key relationships
                 bathroom_prices = [
-                    {"service_name": "bad_totalrenovering_4m2", "region": "Oslo", "min_price": 280000, "max_price": 360000, "sample_size": 5},
-                    {"service_name": "bad_totalrenovering_8m2", "region": "Oslo", "min_price": 340000, "max_price": 440000, "sample_size": 8},
-                    {"service_name": "bad_totalrenovering_12m2", "region": "Oslo", "min_price": 400000, "max_price": 520000, "sample_size": 4}
+                    {"service_name": "bad_totalrenovering_4m2", "region": "Oslo", "min_price": 280000, "max_price": 360000},
+                    {"service_name": "bad_totalrenovering_8m2", "region": "Oslo", "min_price": 340000, "max_price": 440000},
+                    {"service_name": "bad_totalrenovering_12m2", "region": "Oslo", "min_price": 400000, "max_price": 520000}
                 ]
                 
                 for price_data in bathroom_prices:
-                    price = PricingData(**price_data)
-                    db.add(price)
+                    # Find the service_type by name
+                    service_type = db.query(ServiceType).filter(ServiceType.name == price_data["service_name"]).first()
+                    if service_type:
+                        price = PricingData(
+                            service_type_id=service_type.id,
+                            region=price_data["region"],
+                            min_price=price_data["min_price"],
+                            max_price=price_data["max_price"],
+                            avg_price=(price_data["min_price"] + price_data["max_price"]) / 2,
+                            source="startup_initialization",
+                            confidence=0.9
+                        )
+                        db.add(price)
                 
                 db.commit()
                 db.close()
