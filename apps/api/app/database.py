@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models.partner import Base
+from .models.session import SessionMemory  # Import to ensure table creation
 import os
 
 # Database URL - PostgreSQL for production, SQLite for development

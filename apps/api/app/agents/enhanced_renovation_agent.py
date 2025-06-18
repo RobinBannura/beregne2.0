@@ -6,6 +6,8 @@ import os
 from datetime import datetime
 from .base_agent import BaseAgent
 from ..services.pricing_service import PricingService
+from ..services.session_memory_service import SessionMemoryService
+from ..services.ai_query_analyzer import AIQueryAnalyzer
 from ..database import SessionLocal
 
 class EnhancedRenovationAgent(BaseAgent):
@@ -20,9 +22,11 @@ class EnhancedRenovationAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.agent_name = "renovation"
-        # Initialize pricing service
+        # Initialize services
         self.db = SessionLocal()
         self.pricing_service = PricingService(self.db)
+        self.session_memory = SessionMemoryService(self.db)
+        self.ai_analyzer = AIQueryAnalyzer()
         
         # Standardized styling for consistent appearance
         self.BRAND_COLOR = "#1f2937"  # househacker brand color
@@ -219,8 +223,127 @@ class EnhancedRenovationAgent(BaseAgent):
                 
         return False
     
-    async def _handle_ambiguous_query(self, query: str, analysis: Dict) -> Dict[str, Any]:
-        """Handle ambiguous queries with intelligent clarification"""
+    async def _handle_ai_clarification(self, query: str, analysis: Dict, session_id: str = None, context: str = "") -> Dict[str, Any]:
+        """Handle ambiguous queries with AI-generated clarification questions"""
+        
+        # Generate intelligent follow-up questions using AI
+        followup_questions = await self.ai_analyzer.generate_followup_questions(query, analysis, context)
+        
+        # Update session memory with clarification needs
+        if session_id:
+            self.session_memory.update_followup_needs(session_id, analysis.get("missing_info", []))
+        
+        # If we have specific clarification options (like doors), use those
+        if analysis.get("project_type") == "vinduer_dorer" and "door_type" in analysis.get("missing_info", []):
+            return await self._handle_door_clarification(query, analysis)
+        
+        # Generate AI-powered clarification response
+        return self._create_ai_clarification_response(query, analysis, followup_questions)
+    
+    async def _handle_door_clarification(self, query: str, analysis: Dict) -> Dict[str, Any]:
+        """Handle specific door clarification with structured options"""
+        query_lower = query.lower()
+        
+        # Extract number if present
+        import re
+        num_match = re.search(r'(\d+)', query_lower)
+        num_doors = num_match.group(1) if num_match else "X"
+        
+        # Create door-specific clarification options
+        options = [
+            {
+                "title": f"Innerdører - kun dørblad ({num_doors} stk)",
+                "description": "Skifte kun dørblad, beholde eksisterende karm. ~3,000 NOK per dør.",
+                "query": f"skifte {num_doors} innerdører kun dørblad"
+            },
+            {
+                "title": f"Innerdører - komplett med karm ({num_doors} stk)",
+                "description": "Skifte hele døren inkl. karm og montering. ~5,000-7,000 NOK per dør.",
+                "query": f"skifte {num_doors} innerdører komplett med karm"
+            },
+            {
+                "title": f"Ytterdører ({num_doors} stk)",
+                "description": "Skifte ytterdør(er) komplett. ~11,000-16,000 NOK per dør.",
+                "query": f"skifte {num_doors} ytterdører"
+            }
+        ]
+        
+        response_html = self._create_clarification_response(
+            f"Dørskifte - {num_doors} dører",
+            "For å gi deg riktig pris trenger jeg å vite hvilken type dører du vil skifte:",
+            options
+        )
+        
+        return {
+            "response": response_html,
+            "agent_used": self.agent_name,
+            "requires_clarification": True,
+            "total_cost": 0
+        }
+    
+    def _create_ai_clarification_response(self, query: str, analysis: Dict, questions: List[str]) -> Dict[str, Any]:
+        """Create AI-powered clarification response"""
+        
+        project_type = analysis.get("project_type", "oppussingsprosjekt")
+        missing_info = analysis.get("missing_info", [])
+        
+        # Create dynamic title based on project type
+        title_map = {
+            "bad_komplett": "Badrenovering",
+            "kjøkken_detaljert": "Kjøkkenrenovering", 
+            "maling": "Malerarbeid",
+            "gulvarbeider": "Gulvarbeider",
+            "elektriker_arbeid": "Elektrikerarbeid",
+            "vinduer_dorer": "Vinduer og dører",
+            "tomrer_bygg": "Tømrerarbeid",
+            "tak_ytterkledning": "Tak og ytterkledning",
+            "isolasjon_tetting": "Isolasjon og tetting",
+            "grunnarbeider": "Grunnarbeider"
+        }
+        
+        title = title_map.get(project_type, "Oppussingsprosjekt")
+        
+        # Build response HTML
+        response_html = f"""
+<div style="background: {self.LIGHT_BG}; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid {self.BRAND_COLOR};">
+    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">{title}</h2>
+    
+    <div style="background: {self.WHITE_BG}; padding: 20px; border-radius: 6px; border: 1px solid {self.BORDER_COLOR}; margin: 16px 0;">
+        <p style="color: #374151; margin-bottom: 16px; font-size: 16px;">For å gi deg et nøyaktig kostnadsestimat trenger jeg litt mer informasjon:</p>
+        
+        <div style="margin: 16px 0;">"""
+        
+        # Add AI-generated questions
+        for i, question in enumerate(questions[:3]):  # Max 3 questions
+            response_html += f"""
+            <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin: 8px 0; border-left: 3px solid {self.BRAND_COLOR};">
+                <p style="color: #374151; margin: 0; font-size: 14px;">{question}</p>
+            </div>"""
+        
+        response_html += f"""
+        </div>
+        
+        <p style="color: {self.TEXT_GRAY}; font-size: 14px; margin-top: 16px;">
+            Vennligst gi meg disse opplysningene, så kan jeg beregne en nøyaktig pris for deg.
+        </p>
+    </div>
+    
+    <p style="font-size: 14px; color: {self.TEXT_GRAY}; margin-top: 16px; line-height: 1.5;">
+        Alternativt kan du kontakte oss direkte for en detaljert gjennomgang av prosjektet.
+    </p>
+</div>"""
+        
+        return {
+            "response": response_html,
+            "agent_used": self.agent_name,
+            "requires_clarification": True,
+            "total_cost": 0,
+            "missing_info": missing_info,
+            "ai_questions": questions
+        }
+
+    async def _handle_ambiguous_query(self, query: str, analysis: Dict, session_id: str = None) -> Dict[str, Any]:
+        """Legacy handler - kept for fallback compatibility"""
         query_lower = query.lower()
         
         # Door clarification
@@ -303,41 +426,62 @@ class EnhancedRenovationAgent(BaseAgent):
         }
 
     async def process(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Prosesserer oppussingsspørringer med hybrid AI-tilnærming"""
+        """Prosesserer oppussingsspørringer med hybrid AI-tilnærming og session memory"""
         try:
-            analysis = self._analyze_renovation_query(query)
+            # Extract session ID from context
+            session_id = context.get('session_id') if context else None
+            if not session_id:
+                # Generate session ID from query hash if not provided
+                import hashlib
+                session_id = hashlib.md5(f"{query}_{datetime.now().isoformat()}".encode()).hexdigest()[:16]
+            
+            # Store context information in session memory
+            stored_session = self.session_memory.extract_and_store_context(session_id, query)
+            
+            # Get AI context for enhanced analysis
+            ai_context = self.session_memory.get_context_for_ai(session_id)
+            
+            # AI-powered analysis with context
+            analysis = await self.ai_analyzer.analyze_query(query, ai_context)
             
             # HYBRID AI: Check for ambiguous queries first
-            if self._is_ambiguous_query(query, analysis):
-                return await self._handle_ambiguous_query(query, analysis)
+            if analysis.get("is_ambiguous") or analysis.get("needs_clarification"):
+                return await self._handle_ai_clarification(query, analysis, session_id, ai_context)
+            
+            # Pass session context to all handlers
+            handler_context = {
+                "session": stored_session,
+                "ai_context": ai_context,
+                "session_id": session_id
+            }
             
             if analysis["type"] == "full_project_estimate":
                 if analysis.get("project_type") == "kjøkken_detaljert":
-                    result = await self._provide_kitchen_breakdown(analysis, query)
+                    result = await self._provide_kitchen_breakdown(analysis, query, handler_context)
                 elif analysis.get("project_type") == "vinduer_dorer":
-                    result = await self._handle_windows_doors_work(analysis, query)
+                    result = await self._handle_windows_doors_work(analysis, query, handler_context)
                 else:
-                    result = await self._calculate_full_project(analysis, query)
+                    result = await self._calculate_full_project(analysis, query, handler_context)
             elif analysis["type"] == "material_and_labor":
-                result = await self._calculate_material_and_labor(analysis, query)
+                result = await self._calculate_material_and_labor(analysis, query, handler_context)
             elif analysis["type"] == "price_comparison":
-                result = await self._compare_suppliers(analysis, query)
+                result = await self._compare_suppliers(analysis, query, handler_context)
             elif analysis["type"] == "painting_specific":
-                result = await self._handle_painting_inquiry(analysis, query)
+                result = await self._handle_painting_inquiry(analysis, query, handler_context)
             elif analysis["type"] == "electrical_work":
-                result = await self._handle_electrical_work(analysis, query)
+                result = await self._handle_electrical_work(analysis, query, handler_context)
             elif analysis["type"] == "groundwork":
-                result = await self._handle_groundwork(analysis, query)
+                result = await self._handle_groundwork(analysis, query, handler_context)
             elif analysis["type"] == "flooring_work":
-                result = await self._handle_flooring_work(analysis, query)
+                result = await self._handle_flooring_work(analysis, query, handler_context)
             elif analysis["type"] == "carpentry_work":
-                result = await self._handle_carpentry_work(analysis, query)
+                result = await self._handle_carpentry_work(analysis, query, handler_context)
             elif analysis["type"] == "roofing_cladding_work":
-                result = await self._handle_roofing_cladding_work(analysis, query)
+                result = await self._handle_roofing_cladding_work(analysis, query, handler_context)
             elif analysis["type"] == "insulation_work":
-                result = await self._handle_insulation_work(analysis, query)
+                result = await self._handle_insulation_work(analysis, query, handler_context)
             elif analysis["type"] == "windows_doors_work":
-                result = await self._handle_windows_doors_work(analysis, query)
+                result = await self._handle_windows_doors_work(analysis, query, handler_context)
             elif analysis["type"] == "detailed_breakdown":
                 result = await self._provide_detailed_breakdown(analysis, query)
             elif analysis["type"] == "quote_request":
@@ -1080,10 +1224,36 @@ class EnhancedRenovationAgent(BaseAgent):
     async def _calculate_general_groundwork(self, query_lower: str, area: float) -> Dict[str, Any]:
         return await self._groundwork_fallback("grunnarbeider", 50000)
 
-    async def _handle_flooring_work(self, analysis: Dict, query: str) -> Dict[str, Any]:
-        """Handle flooring work specific queries"""
+    async def _handle_flooring_work(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Handle flooring work specific queries with session context"""
         query_lower = query.lower()
+        session = context.get("session") if context else None
         area = analysis.get("area")
+        
+        # Enhanced area detection using session context
+        if not area and session:
+            # Check if user mentioned "hele leiligheten" or similar
+            if any(phrase in query_lower for phrase in ['hele leiligheten', 'hele huset', 'alle rom', 'komplett']):
+                if session.total_area:
+                    # Use 80% of total area for flooring (excluding bathroom, kitchen, etc.)
+                    area = session.total_area * 0.8
+                else:
+                    # Default for typical apartment
+                    area = 60
+            
+            # Check specific rooms mentioned
+            elif session.get_rooms_data():
+                rooms_data = session.get_rooms_data()
+                mentioned_rooms = []
+                
+                for room in ['stue', 'soverom', 'gang', 'kjøkken']:
+                    if room in query_lower and room in rooms_data:
+                        mentioned_rooms.append(room)
+                
+                if mentioned_rooms:
+                    total_area = sum(rooms_data[room].get('area', 0) for room in mentioned_rooms)
+                    if total_area > 0:
+                        area = total_area
         
         try:
             # Determine what type of flooring work is requested
@@ -1923,8 +2093,8 @@ class EnhancedRenovationAgent(BaseAgent):
             ]
         }
 
-    def _analyze_renovation_query(self, query: str) -> Dict[str, Any]:
-        """Analyserer spørring for å bestemme type beregning som trengs"""
+    def _analyze_renovation_query(self, query: str, ai_context: str = "") -> Dict[str, Any]:
+        """Analyserer spørring for å bestemme type beregning som trengs med AI-kontekst"""
         query_lower = query.lower()
         
         # Ekstrahering av areal
@@ -2479,9 +2649,38 @@ class EnhancedRenovationAgent(BaseAgent):
             "questions_asked": questions
         }
 
-    async def _handle_painting_inquiry(self, analysis: Dict, query: str) -> Dict[str, Any]:
-        """Håndterer spesifikke malingsspørsmål med detaljerte oppfølgingsspørsmål"""
-        area = analysis.get("area", 20)  # Default 20m² hvis ikke oppgitt
+    async def _handle_painting_inquiry(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Håndterer spesifikke malingsspørsmål med detaljerte oppfølgingsspørsmål og session context"""
+        
+        # Use session context to enhance area calculation
+        session = context.get("session") if context else None
+        area = analysis.get("area")
+        
+        # Try to get area from session context if not in query
+        if not area and session:
+            rooms_data = session.get_rooms_data()
+            if rooms_data:
+                # Calculate total area from rooms if painting multiple rooms
+                query_lower = query.lower()
+                if any(word in query_lower for word in ['stue', 'gang', 'male']):
+                    relevant_rooms = ['stue', 'gang', 'soverom', 'kjøkken']
+                    total_area = 0
+                    for room in relevant_rooms:
+                        if room in rooms_data and 'area' in rooms_data[room]:
+                            total_area += rooms_data[room]['area']
+                    if total_area > 0:
+                        area = total_area
+                        
+            # Fallback to property total area if available
+            if not area and session.total_area:
+                # For whole apartment painting, use reasonable multiplier
+                if any(word in query_lower for word in ['hele', 'all', 'komplett']):
+                    area = session.total_area
+                    
+        # Final fallback
+        if not area:
+            area = 20
+        
         details = analysis.get("specific_details", {})
         
         # Beregn malingbehov basert på detaljer
