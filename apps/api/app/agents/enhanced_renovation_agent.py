@@ -542,7 +542,7 @@ class EnhancedRenovationAgent(BaseAgent):
                 "error": str(e)
             }
 
-    async def _calculate_full_project(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _calculate_full_project(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Beregner komplett prosjekt med materialer, arbeid og tillegg"""
         project_type = analysis.get("project_type", "bad_komplett")
         area = analysis.get("area", 10)
@@ -844,7 +844,7 @@ class EnhancedRenovationAgent(BaseAgent):
         """Handle large bathrooms (>12m²) with component scaling"""
         return await self._calculate_bathroom_components(area, query_lower)
 
-    async def _handle_electrical_work(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _handle_electrical_work(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle electrical work specific queries"""
         query_lower = query.lower()
         area = analysis.get("area")
@@ -1045,7 +1045,7 @@ class EnhancedRenovationAgent(BaseAgent):
         """General electrical work calculation"""
         return await self._electrical_fallback("elektrikerarbeid", 8000)
 
-    async def _handle_groundwork(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _handle_groundwork(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle groundwork specific queries"""
         query_lower = query.lower()
         area = analysis.get("area")
@@ -1504,7 +1504,7 @@ class EnhancedRenovationAgent(BaseAgent):
     async def _calculate_general_flooring(self, query_lower: str, area: float) -> Dict[str, Any]:
         return await self._flooring_fallback("gulvarbeider", (area or 30) * 600)
 
-    async def _provide_kitchen_breakdown(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _provide_kitchen_breakdown(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Gir detaljert kjøkkenrenovering guide med realistiske kostnader"""
         response = f"""
 <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 16px 0;">
@@ -2237,7 +2237,7 @@ class EnhancedRenovationAgent(BaseAgent):
                 materials.append(material)
         return materials if materials else ["maling", "fliser"]  # Default
 
-    async def _calculate_material_and_labor(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _calculate_material_and_labor(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Beregner material og arbeidskostnader"""
         materials = analysis.get("materials", ["maling"])
         area = analysis.get("area", 10)
@@ -2553,7 +2553,7 @@ class EnhancedRenovationAgent(BaseAgent):
             "agent_used": self.agent_name
         }
 
-    async def _compare_suppliers(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _compare_suppliers(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Sammenligner priser fra forskjellige leverandører"""
         materials = analysis.get("materials", ["maling"])
         
@@ -2963,7 +2963,7 @@ class EnhancedRenovationAgent(BaseAgent):
         }
 
     # New comprehensive category handlers
-    async def _handle_carpentry_work(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _handle_carpentry_work(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle carpentry and building work queries"""
         try:
             query_lower = query.lower()
@@ -2986,7 +2986,7 @@ class EnhancedRenovationAgent(BaseAgent):
         except Exception as e:
             return await self._carpentry_fallback(f"tømrerarbeid {area:.0f}m²", area * 600)
 
-    async def _handle_roofing_cladding_work(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _handle_roofing_cladding_work(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle roofing and exterior cladding work queries"""
         try:
             query_lower = query.lower()
@@ -3007,7 +3007,7 @@ class EnhancedRenovationAgent(BaseAgent):
         except Exception as e:
             return await self._roofing_fallback(f"takarbeid {area:.0f}m²", area * 2000)
 
-    async def _handle_insulation_work(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _handle_insulation_work(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle insulation and sealing work queries"""
         try:
             query_lower = query.lower()
@@ -3028,7 +3028,7 @@ class EnhancedRenovationAgent(BaseAgent):
         except Exception as e:
             return await self._insulation_fallback(f"isolasjonsarbeid {area:.0f}m²", area * 400)
 
-    async def _handle_windows_doors_work(self, analysis: Dict, query: str) -> Dict[str, Any]:
+    async def _handle_windows_doors_work(self, analysis: Dict, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle windows and doors work queries"""
         try:
             query_lower = query.lower()
