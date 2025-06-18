@@ -99,9 +99,9 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
     async def process(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process query with conversational approach and learning"""
         
-        # Extract session info for logging
+        # Extract session info for logging (with safe fallbacks)
         session = context.get("session") if context else None
-        session_id = getattr(session, 'session_id', None) if session else context.get("session_id", "unknown")
+        session_id = getattr(session, 'session_id', None) if session else (context.get("session_id", "unknown") if context else "unknown")
         partner_id = context.get("partner_id", "unknown") if context else "unknown"
         
         # Start conversation logging
@@ -124,7 +124,23 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
             result = await self._start_registration_flow(query, context)
         else:
             # First, get the technical analysis and pricing from parent class
-            technical_result = await super().process(query, context)
+            try:
+                technical_result = await super().process(query, context)
+                if not technical_result:
+                    technical_result = {
+                        "response": "Jeg forstod ikke spørsmålet helt. Kan du prøve å omformulere det?",
+                        "requires_clarification": False,
+                        "total_cost": 0,
+                        "agent_used": self.agent_name
+                    }
+            except Exception as e:
+                print(f"Parent process failed: {e}")
+                technical_result = {
+                    "response": "Det oppstod en teknisk feil. Kan du prøve igjen?",
+                    "requires_clarification": False, 
+                    "total_cost": 0,
+                    "agent_used": self.agent_name
+                }
             
             # Then wrap it in conversational response
             result = await self._create_conversational_response(
@@ -158,12 +174,21 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
     ) -> Dict[str, Any]:
         """Create a human-like conversational response"""
         
+        # Safe fallback if technical_result is None
+        if not technical_result:
+            technical_result = {
+                "response": "Beklager, jeg kunne ikke behandle spørringen din akkurat nå.",
+                "requires_clarification": False,
+                "total_cost": 0
+            }
+        
         # Analyze conversation stage
         session = context.get("session") if context else None
         conversation_stage = self._determine_conversation_stage(query, session)
         
-        # Get project type for contextual advice
-        project_type = technical_result.get("calculation_details", {}).get("project_type", "")
+        # Get project type for contextual advice (with safe fallbacks)
+        calculation_details = technical_result.get("calculation_details") or {}
+        project_type = calculation_details.get("project_type", "") if isinstance(calculation_details, dict) else ""
         
         if technical_result.get("requires_clarification"):
             return await self._wrap_clarification_conversationally(
