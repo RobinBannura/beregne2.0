@@ -12,14 +12,18 @@ class AIQueryAnalyzer:
     
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is required")
+        # Don't require API key at init - allow fallback to regex analysis
     
     async def analyze_query(self, query: str, context: str = "") -> Dict[str, Any]:
         """
         Analyze renovation query using AI for better understanding
         Returns structured analysis including project type, intent, missing info
         """
+        
+        # Check if API key is available
+        if not self.api_key:
+            print("OpenAI API key not available, using fallback regex analysis")
+            return self._fallback_regex_analysis(query)
         
         # Build the AI prompt for query analysis
         analysis_prompt = self._build_analysis_prompt(query, context)
@@ -176,7 +180,7 @@ Examples:
         """Fallback regex-based analysis when AI fails"""
         query_lower = query.lower()
         
-        # Basic regex analysis (simplified version of original)
+        # Enhanced regex analysis for common queries
         analysis = {
             "type": "needs_clarification",
             "project_type": self._guess_project_type_from_query(query),
@@ -191,6 +195,70 @@ Examples:
             "reasoning": "Fallback regex analysis due to AI failure",
             "needs_clarification": True
         }
+        
+        # Better detection for clear queries
+        project_type = analysis["project_type"]
+        
+        # If we have a clear project type, try to determine if it needs clarification
+        if project_type != "needs_clarification":
+            # Check for specific indicators that make query clear
+            has_area = bool(re.search(r'\d+(?:\.\d+)?\s*(?:m²|m2|kvadratmeter|kvm)', query_lower))
+            has_quantity = bool(re.search(r'\d+\s*(?:stk|vindu|vinduer|dør|dører)', query_lower))
+            
+            # Clear bathroom queries
+            if project_type == "bad_komplett" and has_area:
+                analysis.update({
+                    "type": "full_project_estimate",
+                    "is_ambiguous": False,
+                    "needs_clarification": False,
+                    "confidence": 0.8,
+                    "missing_info": []
+                })
+            
+            # Clear painting queries with area
+            elif project_type == "maling" and has_area:
+                analysis.update({
+                    "type": "painting_specific",
+                    "is_ambiguous": False,
+                    "needs_clarification": False,
+                    "confidence": 0.8,
+                    "missing_info": []
+                })
+            
+            # Clear flooring queries
+            elif project_type == "gulvarbeider" and (has_area or 'hele' in query_lower):
+                analysis.update({
+                    "type": "flooring_work",
+                    "is_ambiguous": False,
+                    "needs_clarification": False,
+                    "confidence": 0.8,
+                    "missing_info": []
+                })
+            
+            # Clear door/window queries with quantity
+            elif project_type == "vinduer_dorer" and has_quantity:
+                # Still check for door ambiguity
+                if 'dør' in query_lower and not any(word in query_lower for word in ['innerdør', 'ytterdør', 'dørblad', 'karm']):
+                    analysis.update({
+                        "missing_info": ["door_type"],
+                        "is_ambiguous": True
+                    })
+                else:
+                    analysis.update({
+                        "type": "windows_doors_work",
+                        "is_ambiguous": False,
+                        "needs_clarification": False,
+                        "confidence": 0.8,
+                        "missing_info": []
+                    })
+            
+            # General bathroom question without area
+            elif project_type == "bad_komplett" and any(phrase in query_lower for phrase in ['hva koster', 'pris', 'kostnad']):
+                analysis.update({
+                    "missing_info": ["area"],
+                    "is_ambiguous": True,
+                    "confidence": 0.7
+                })
         
         # Extract area
         area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:m²|m2|kvadratmeter|kvm)', query_lower)
@@ -214,6 +282,10 @@ Examples:
         
         if not analysis.get("missing_info"):
             return []
+        
+        # Check if API key is available
+        if not self.api_key:
+            return self._generate_fallback_questions(analysis)
         
         prompt = f"""Generate 2-3 intelligent follow-up questions in Norwegian for this renovation query:
 
