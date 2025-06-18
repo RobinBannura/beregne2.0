@@ -90,7 +90,7 @@ async def startup_event():
                 brand_name="househacker",
                 brand_color="#1f2937",
                 logo_url="https://househacker.no/logo.png",
-                enabled_agents=["renovation"],
+                enabled_agents=["conversational_renovation"],
                 agent_display_name="househacker-assistent",
                 welcome_message="Hei! Jeg er din househacker-assistent. Har du spørsmål innen oppussing? Eller ønsker du å registrere et prosjekt slik at vi kan hjelpe deg i gang?",
                 widget_position="bottom-right",
@@ -192,6 +192,26 @@ async def get_agents():
         "agents": orchestrator.get_available_agents(),
         "total": orchestrator.get_agent_count()
     }
+
+@app.post("/api/admin/fix-agent-config")
+async def fix_agent_config(db: Session = Depends(get_db)):
+    """Fix househacker agent configuration to use conversational_renovation"""
+    try:
+        partner = db.query(Partner).filter(Partner.partner_id == "househacker").first()
+        if partner:
+            old_agents = partner.enabled_agents
+            partner.enabled_agents = ["conversational_renovation"]
+            db.commit()
+            return {
+                "status": "success",
+                "message": "Updated househacker agent configuration",
+                "old_agents": old_agents,
+                "new_agents": partner.enabled_agents
+            }
+        else:
+            return {"status": "error", "message": "househacker partner not found"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import os
