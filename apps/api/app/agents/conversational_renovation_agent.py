@@ -170,14 +170,17 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         clarification_details = technical_result.get("clarification_details", {})
         questions = clarification_details.get("questions", [])
         
-        # Create simple conversational response
+        # Create simple conversational response with helpful questions
         response_parts = [intro]
         
-        if questions:
+        if "bad" in query.lower():
+            response_parts.append("For å gi deg et godt prisestimat trenger jeg å vite:")
+            response_parts.append("Hvor stort er badet i kvadratmeter? Og tenker du standard kvalitet, høy standard eller enkel standard?")
+        elif questions:
             response_parts.append("For å gi deg et godt prisestimat trenger jeg å vite:")
             response_parts.extend([f"- {q}" for q in questions])
         else:
-            response_parts.append("Kan du fortelle meg litt mer om prosjektet?")
+            response_parts.append("Kan du fortelle meg hvor stort det er og hva slags standard du tenker deg?")
         
         conversational_response = " ".join(response_parts)
         

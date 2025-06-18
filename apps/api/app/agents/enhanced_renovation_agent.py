@@ -677,9 +677,17 @@ class EnhancedRenovationAgent(BaseAgent):
             # Extract package pricing
             package_price = package_result.get("unit_price", {}).get("recommended_price", 0)
             
-            # Scale price based on actual area vs package area
+            # Bathroom renovation has significant fixed costs that don't scale linearly
+            # Use smart scaling that accounts for fixed costs
+            fixed_cost_percentage = 0.6  # 60% of bathroom cost is fixed (fixtures, plumbing, electrical)
+            variable_cost_percentage = 0.4  # 40% scales with area (tiles, materials)
+            
+            fixed_cost = package_price * fixed_cost_percentage
+            variable_cost = package_price * variable_cost_percentage
             area_factor = area / package_area
-            scaled_price = package_price * area_factor
+            scaled_variable_cost = variable_cost * area_factor
+            
+            scaled_price = fixed_cost + scaled_variable_cost
             
             # Generate response
             response = f"""
