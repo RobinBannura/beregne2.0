@@ -16,20 +16,22 @@ Complete AI-powered calculator platform for Norway with partner embedding system
 - **Partner System**: Configurable branding and agent selection
 
 ## 🤖 AI Agents
-- **Enhanced Renovation Agent**: Complete building cost calculator with CRM integration (ACTIVE)
-  - Material and labor calculations with realistic Norwegian pricing
-  - Complete project estimates (materials, labor, overhead, project management)
-  - Lead generation for projects over 50,000 NOK
+- **househacker-assistent**: AI assistant for renovation projects and lead generation (ACTIVE)
+  - Fact-based company information (no hallucination)
+  - Professional pricing by default (10-20% higher than DIY)
+  - Project registration and coordination services
+  - Lead generation for projects over 10,000 NOK
   - Monday.com CRM integration active (Board ID: 2004442153)
-  - Automatic lead capture with consultation booking
+  - Minimalist, professional design without excessive emojis
 - **Loan Agent**: Norwegian lending rules (PLANNED)
 - **Energy Agent**: Real-time electricity prices (PLANNED)
 
 ## 👥 Partners
 - **househacker**: Active partner with renovation agent
-  - Brand color: #e11d48
+  - Brand color: #1f2937 (professional black/gray theme)
   - Widget position: bottom-right
   - Agents: ["renovation"]
+  - Widget design: Professional black theme with minimal emojis
 
 ## 🔧 Development Commands
 ```bash
@@ -61,6 +63,15 @@ git add . && git commit -m "message" && git push
 - [x] Monday.com CRM integration for lead generation ✅ DONE
 - [x] Set up Monday.com API credentials (MONDAY_API_TOKEN, MONDAY_BOARD_ID) ✅ DONE
 - [x] Test lead generation workflow with real Monday.com board ✅ DONE
+- [x] Redesign widget with professional black theme, removed red branding ✅ DONE
+- [x] Update realistic examples (5m² bathrooms instead of 15m²) ✅ DONE
+- [x] Reduce emoji usage for professional appearance ✅ DONE
+- [x] Implement hybrid AI approach for intelligent query handling ✅ DONE
+- [x] Add smart clarification for ambiguous queries (doors, kitchen types) ✅ DONE
+- [x] Fix door query routing issues ✅ DONE
+- [x] Standardize all response styling with consistent househacker branding ✅ DONE
+- [ ] Fix painting query misinterpretation (currently routed to flooring)
+- [ ] Fix "parkett hele leiligheten" NoneType error
 - [ ] Consider custom domains (beregne.no)
 - [ ] Add real-time pricing API integrations (Maxbo, Byggmax)
 
