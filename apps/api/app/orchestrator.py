@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 import logging
 from .agents.base_agent import BaseAgent
-from .agents.enhanced_renovation_agent import EnhancedRenovationAgent
+from .agents.conversational_renovation_agent import ConversationalRenovationAgent
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +18,8 @@ class AgentOrchestrator:
     def _initialize_agents(self):
         """Initialize all available agents"""
         try:
-            # Add enhanced renovation agent
-            renovation_agent = EnhancedRenovationAgent()
+            # Add conversational renovation agent
+            renovation_agent = ConversationalRenovationAgent()
             self.agents.append(renovation_agent)
             logger.info(f"Initialized agent: {renovation_agent.get_agent_name()}")
             

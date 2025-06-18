@@ -36,6 +36,10 @@ class SessionMemory(Base):
     preferred_quality_level = Column(String)  # "budget", "mid", "premium"
     preferred_brands = Column(Text)  # JSON: ["IKEA", "HTH"] etc
     
+    # Registration flow state
+    registration_stage = Column(String)  # Current stage in registration process
+    registration_data = Column(Text)  # JSON: collected registration data
+    
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -92,6 +96,19 @@ class SessionMemory(Base):
     def set_preferred_brands(self, brands: list):
         """Set preferred brands from list"""
         self.preferred_brands = json.dumps(brands)
+    
+    def get_registration_data(self) -> Dict[str, Any]:
+        """Get registration data as dict"""
+        if self.registration_data:
+            try:
+                return json.loads(self.registration_data)
+            except:
+                return {}
+        return {}
+    
+    def set_registration_data(self, data: Dict[str, Any]):
+        """Set registration data from dict"""
+        self.registration_data = json.dumps(data)
     
     def get_context_summary(self) -> str:
         """
