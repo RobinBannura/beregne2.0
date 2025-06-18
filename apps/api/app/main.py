@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Beregne 2.0 API",
     description="AI-Powered Calculator Platform for Norway",
-    version="2.0.0",
+    version="2.0.1",  # Force Railway redeploy with hybrid AI
     docs_url="/docs",
     redoc_url="/redoc"
 )
