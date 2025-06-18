@@ -79,6 +79,51 @@ async def startup_event():
         from .models.conversation import ConversationSession, ConversationMessage, ConversationPattern, Base
         Base.metadata.create_all(bind=SessionLocal().bind)
         
+        # Initialize pricing data if missing
+        try:
+            from .models.pricing import ServiceType, PricingData
+            from .services.pricing_service import PricingService
+            
+            db = SessionLocal()
+            pricing_service = PricingService(db)
+            
+            # Check if bathroom pricing exists
+            test_service = db.query(ServiceType).filter(ServiceType.name == "bad_totalrenovering_8m2").first()
+            if not test_service:
+                logger.info("💰 Initializing bathroom pricing data...")
+                
+                # Create bathroom service types
+                bathroom_services = [
+                    {"name": "bad_totalrenovering_4m2", "description": "Totalrenovering 4m² bad", "unit": "stk", "category": "bad_komplett"},
+                    {"name": "bad_totalrenovering_8m2", "description": "Totalrenovering 8m² bad", "unit": "stk", "category": "bad_komplett"},
+                    {"name": "bad_totalrenovering_12m2", "description": "Totalrenovering 12m² bad", "unit": "stk", "category": "bad_komplett"}
+                ]
+                
+                for service_data in bathroom_services:
+                    service = ServiceType(**service_data)
+                    db.add(service)
+                
+                # Create bathroom pricing data
+                bathroom_prices = [
+                    {"service_name": "bad_totalrenovering_4m2", "region": "Oslo", "min_price": 280000, "max_price": 360000, "sample_size": 5},
+                    {"service_name": "bad_totalrenovering_8m2", "region": "Oslo", "min_price": 340000, "max_price": 440000, "sample_size": 8},
+                    {"service_name": "bad_totalrenovering_12m2", "region": "Oslo", "min_price": 400000, "max_price": 520000, "sample_size": 4}
+                ]
+                
+                for price_data in bathroom_prices:
+                    price = PricingData(**price_data)
+                    db.add(price)
+                
+                db.commit()
+                db.close()
+                logger.info("✅ Bathroom pricing data initialized")
+            else:
+                logger.info("✅ Bathroom pricing data already exists")
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"❌ Error initializing pricing data: {e}")
+        
         logger.info("📊 Database initialized with all tables")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
