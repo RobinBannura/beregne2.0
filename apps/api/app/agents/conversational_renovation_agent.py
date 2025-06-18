@@ -602,3 +602,54 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
             "requires_clarification": True,
             "total_cost": 0
         }
+    
+    def can_handle(self, query: str) -> bool:
+        """Conversational agent is more liberal - can handle contextual responses and general queries"""
+        query_lower = query.lower()
+        
+        # First check if parent class can handle it (renovation-specific queries)
+        if super().can_handle(query):
+            return True
+        
+        # Handle contextual responses that contain size/quality information
+        # These might be responses to previous questions
+        contextual_indicators = [
+            # Size indicators
+            r'\d+\s*(?:m²|m2|kvadratmeter|kvm)',
+            r'\d+\s*kvadrat',
+            
+            # Quality indicators  
+            'standard', 'kvalitet', 'normal', 'høy', 'enkel', 'premium', 'billig', 'dyr',
+            
+            # General indicators that this might be a response
+            'og', 'med', 'ca', 'cirka', 'rundt',
+            
+            # Numbers that could be quantities or sizes
+            r'\d+\s*(?:stk|vindu|vinduer|dør|dører|rom)'
+        ]
+        
+        for indicator in contextual_indicators:
+            if isinstance(indicator, str):
+                if indicator in query_lower:
+                    return True
+            else:
+                # Regex pattern
+                import re
+                if re.search(indicator, query_lower):
+                    return True
+        
+        # Handle questions about the agent itself
+        agent_questions = [
+            'hvem er du', 'hva er', 'kan du', 'hjelpe', 'hjelp',
+            'househacker', 'info', 'informasjon'
+        ]
+        
+        if any(phrase in query_lower for phrase in agent_questions):
+            return True
+        
+        # Handle very short responses that might be contextual
+        words = query_lower.strip().split()
+        if len(words) <= 5 and any(char.isdigit() for char in query_lower):
+            return True
+        
+        return False
