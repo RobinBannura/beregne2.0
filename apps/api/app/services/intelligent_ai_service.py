@@ -72,7 +72,10 @@ class IntelligentAIService:
             )
             
             # Parse response
-            ai_response = json.loads(response.choices[0].message.content)
+            response_content = response.choices[0].message.content.strip()
+            if not response_content:
+                raise ValueError("Empty response from AI")
+            ai_response = json.loads(response_content)
             
             return {
                 "success": True,
