@@ -30,6 +30,85 @@ class EnhancedRenovationAgent(BaseAgent):
         self.WHITE_BG = "#ffffff"
         self.BORDER_COLOR = "#e5e7eb"
         self.TEXT_GRAY = "#6b7280"
+        
+        # Faktabasert informasjon om househacker
+        self.COMPANY_INFO = {
+            "name": "househacker",
+            "description": "Vi hjelper til i anbudsprosessen og sparer både kunden og entreprenøren for tid",
+            "main_goal": "Definere prosjektet i samarbeid med kunden for at jobben skal bli bedre for alle parter",
+            "products": {
+                "solo": "Solo-pakke for enkle prosjekter",
+                "direkte": "Direkte kontakt med utvalgte entreprenører", 
+                "premium": "Premium-tjeneste med full oppfølging"
+            },
+            "services": [
+                "Hjelp i anbudsprosessen",
+                "Prosjektdefinisjon i samarbeid med kunde",
+                "Tidsbesparelse for både kunde og entreprenør"
+            ],
+            "process": [
+                "Kunde registrerer prosjekt",
+                "Vi definerer prosjektet sammen med kunden",
+                "Anbudsprosess med relevante entreprenører",
+                "Kunde velger tilbyder"
+            ]
+        }
+        
+        # Legacy pricing constants (kept for backup calculations)
+        self.LEGACY_HOURLY_RATES = {
+            "maler": 850,
+            "flislegger": 1100, 
+            "gulvlegger": 800,
+            "rørlegger": 1300,
+            "elektriker": 1450,
+            "tømrer": 850
+        }
+        
+        # Komplette prosjekttyper (Oslo-markedet)
+        self.PROJECT_TYPES = {
+            "bad_komplett": {
+                "materialer": ["fliser", "rør", "elektrisk", "maling"],
+                "arbeidsområder": ["rørlegger", "elektriker", "flislegger", "maler"],
+                "base_kostnader": {
+                    "wc": 15000,
+                    "servant": 8000, 
+                    "dusjkabinett": 25000,
+                    "ventilasjon": 12000,
+                    "gulvvarme": 8000,
+                    "riving": 25000
+                },
+                "tillegg": {
+                    "prosjektledelse": 0.18,  # 18% av total for Oslo
+                    "uforutsett": 0.15,       # 15% buffer (Oslo-kompleksitet)
+                    "rydding": 15000,         # Høyere Oslo-priser
+                    "byggesøknad": 8000       # Ofte nødvendig i Oslo
+                }
+            },
+            "kjøkken_komplett": {
+                "materialer": ["laminat", "elektrisk", "maling", "benkeplate"],
+                "arbeidsområder": ["elektriker", "tømrer", "maler"],
+                "base_kostnader": {
+                    "skap": 80000,  # Gjennomsnittlig for Oslo
+                    "hvitevarer": 45000,
+                    "ventilator": 8000,
+                    "belysning": 15000,
+                    "riving": 20000
+                },
+                "tillegg": {
+                    "prosjektledelse": 0.15,
+                    "uforutsett": 0.12,
+                    "rydding": 12000,
+                    "byggesøknad": 5000
+                }
+            }
+        }
+        
+        # CRM integrasjon
+        self.MONDAY_CONFIG = {
+            "board_id": "2004442153",
+            "api_token": os.getenv("MONDAY_API_TOKEN", "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjUyNzE1NzU5NSwiYWFpIjoxMSwidWlkIjo3Njg2NzQ1OCwiaWFkIjoiMjAyNS0wNi0xNlQyMzowNDowOS4yNTlaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6Mjk4NTIzNTgsInJnbiI6ImV1YzEifQ.vUbawhibR9-r7Ex-6L2N_0FEVAeG9N8Sl88kQ14bvWw"),
+            "lead_threshold": 50000  # Hvis prosjekt > 50k NOK, send til Monday
+        }
     
     def _create_standard_response(self, title: str, total_cost: float, cost_details: str = "", 
                                 included_items: list = None, notes: str = "", 
@@ -221,85 +300,6 @@ class EnhancedRenovationAgent(BaseAgent):
             "agent_used": self.agent_name,
             "requires_clarification": True,
             "total_cost": 0
-        }
-        
-        # Faktabasert informasjon om househacker
-        self.COMPANY_INFO = {
-            "name": "househacker",
-            "description": "Vi hjelper til i anbudsprosessen og sparer både kunden og entreprenøren for tid",
-            "main_goal": "Definere prosjektet i samarbeid med kunden for at jobben skal bli bedre for alle parter",
-            "products": {
-                "solo": "Solo-pakke for enkle prosjekter",
-                "direkte": "Direkte kontakt med utvalgte entreprenører", 
-                "premium": "Premium-tjeneste med full oppfølging"
-            },
-            "services": [
-                "Hjelp i anbudsprosessen",
-                "Prosjektdefinisjon i samarbeid med kunde",
-                "Tidsbesparelse for både kunde og entreprenør"
-            ],
-            "process": [
-                "Kunde registrerer prosjekt",
-                "Vi definerer prosjektet sammen med kunden",
-                "Anbudsprosess med relevante entreprenører",
-                "Kunde velger tilbyder"
-            ]
-        }
-        
-        # Legacy pricing constants (kept for backup calculations)
-        self.LEGACY_HOURLY_RATES = {
-            "maler": 850,
-            "flislegger": 1100, 
-            "gulvlegger": 800,
-            "rørlegger": 1300,
-            "elektriker": 1450,
-            "tømrer": 850
-        }
-        
-        # Komplette prosjekttyper (Oslo-markedet)
-        self.PROJECT_TYPES = {
-            "bad_komplett": {
-                "materialer": ["fliser", "rør", "elektrisk", "maling"],
-                "arbeidsområder": ["rørlegger", "elektriker", "flislegger", "maler"],
-                "base_kostnader": {
-                    "wc": 15000,
-                    "servant": 8000, 
-                    "dusjkabinett": 25000,
-                    "ventilasjon": 12000,
-                    "gulvvarme": 8000,
-                    "riving": 25000
-                },
-                "tillegg": {
-                    "prosjektledelse": 0.18,  # 18% av total for Oslo
-                    "uforutsett": 0.15,       # 15% buffer (Oslo-kompleksitet)
-                    "rydding": 15000,         # Høyere Oslo-priser
-                    "byggesøknad": 8000       # Ofte nødvendig i Oslo
-                }
-            },
-            "kjøkken_komplett": {
-                "materialer": ["laminat", "elektrisk", "maling", "benkeplate"],
-                "arbeidsområder": ["elektriker", "tømrer", "maler"],
-                "base_kostnader": {
-                    "skap": 80000,  # Gjennomsnittlig for Oslo
-                    "hvitevarer": 45000,
-                    "ventilator": 8000,
-                    "belysning": 15000,
-                    "riving": 20000
-                },
-                "tillegg": {
-                    "prosjektledelse": 0.15,
-                    "uforutsett": 0.12,
-                    "rydding": 12000,
-                    "byggesøknad": 5000
-                }
-            }
-        }
-        
-        # CRM integrasjon
-        self.MONDAY_CONFIG = {
-            "board_id": os.getenv("MONDAY_BOARD_ID", "2004442153"),
-            "api_token": os.getenv("MONDAY_API_TOKEN", "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjUyNzE1NzU5NSwiYWFpIjoxMSwidWlkIjo3Njg2NzQ1OCwiaWFkIjoiMjAyNS0wNi0xNlQyMzowNDowOS4yNTlaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6Mjk4NTIzNTgsInJnbiI6ImV1YzEifQ.vUbawhibR9-r7Ex-6L2N_0FEVAeG9N8Sl88kQ14bvWw"),
-            "lead_threshold": 50000  # Hvis prosjekt > 50k NOK, send til Monday
         }
 
     async def process(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -1940,16 +1940,17 @@ class EnhancedRenovationAgent(BaseAgent):
             project_type = "grunnarbeider"
         elif any(word in query_lower for word in ['gulv', 'parkett', 'laminat', 'vinyl', 'epoxy', 'microsement', 'gulvavretting', 'gulvsliping', 'varmekabler gulv']):
             project_type = "gulvarbeider"
-        elif any(word in query_lower for word in ['tømrer', 'lettvegg', 'skillevegg', 'himling', 'dør', 'innerdør', 'vindusfor', 'listverk', 'gipsplat', 'konstruksjon']):
+        # Check doors/windows BEFORE carpentry to ensure proper routing
+        elif any(word in query_lower for word in ['vindu', 'vinduer', 'bytte vindu', 'vindusutskifting', 'vindumontasje', 'spesialglass']) or re.search(r'\d+\s*vinduer?', query_lower):
+            project_type = "vinduer_dorer"
+        elif any(word in query_lower for word in ['ytterdør', 'inngangsdør', 'innerdør', 'dører']) or re.search(r'\d+\s*dører?', query_lower):
+            project_type = "vinduer_dorer"
+        elif any(word in query_lower for word in ['tømrer', 'lettvegg', 'skillevegg', 'himling', 'vindusfor', 'listverk', 'gipsplat', 'konstruksjon']):
             project_type = "tomrer_bygg"
         elif any(word in query_lower for word in ['tak', 'takomlegging', 'takstein', 'takshingel', 'skifer', 'takrenne', 'ytterkledning', 'kledning', 'etterisolering', 'fasade']):
             project_type = "tak_ytterkledning"
         elif any(word in query_lower for word in ['isolasjon', 'isolering', 'blåseisolasjon', 'dampsperre', 'lufttetting', 'kuldebryt', 'energioppgradering', 'kjellerisolasjon']):
             project_type = "isolasjon_tetting"
-        elif any(word in query_lower for word in ['vindu', 'vinduer', 'bytte vindu', 'vindusutskifting', 'vindumontasje', 'spesialglass']) or re.search(r'\d+\s*vinduer?', query_lower):
-            project_type = "vinduer_dorer"
-        elif any(word in query_lower for word in ['ytterdør', 'inngangsdør']):
-            project_type = "vinduer_dorer"
         else:
             project_type = "unknown"
         
@@ -3007,7 +3008,72 @@ class EnhancedRenovationAgent(BaseAgent):
         return await self._windows_doors_fallback("ytterdør", 11000)
         
     async def _calculate_interior_doors(self, query_lower: str, num_items: int):
-        return await self._windows_doors_fallback(f"innerdører {num_items} stk", num_items * 3000)
+        """Calculate interior door costs using database pricing"""
+        try:
+            # Check if it's "komplett med karm" or just "dørblad"
+            if 'komplett' in query_lower and 'karm' in query_lower:
+                # Full door replacement including frame
+                unit_price = 5500  # Average for full door replacement
+                service_name = "innerdør_standard_komplett"
+            else:
+                # Just door leaf replacement
+                unit_price = 3000  # Average for door leaf only
+                service_name = "innerdor_standard_komplett"
+            
+            # Try to get database pricing
+            try:
+                result = self.pricing_service.get_service_price(service_name, area=num_items)
+            except:
+                result = {"error": "Database not available"}
+            
+            if "error" not in result:
+                total_cost = result.get("total_cost", {}).get("recommended", 0)
+                unit_price = result.get("unit_price", {}).get("recommended_price", 0)
+            else:
+                # Use fallback pricing
+                total_cost = unit_price * num_items
+            
+            # Create standardized response
+            title = f"Innerdører - {num_items} {'dør' if num_items == 1 else 'dører'}"
+            cost_details = f'<p style="margin-top: 8px; opacity: 0.9; font-size: 14px;">Per dør: {unit_price:,.0f} NOK</p>'
+            
+            if 'komplett' in query_lower and 'karm' in query_lower:
+                included_items = [
+                    "Nye innerdører (standard kvalitet)",
+                    "Karmer og omramming", 
+                    "Demontering av gamle dører",
+                    "Montering og justering",
+                    "Håndtak og beslag"
+                ]
+                notes = "Komplett utskifting inkludert karm og all montering. Basert på markedspriser Oslo/Viken 2025."
+            else:
+                included_items = [
+                    "Nye dørblad (standard kvalitet)",
+                    "Demontering av gamle dørblad",
+                    "Montering på eksisterende karm", 
+                    "Justering og tilpasning"
+                ]
+                notes = "Kun utskifting av dørblad, eksisterende karm beholdes. Basert på markedspriser Oslo/Viken 2025."
+            
+            response = self._create_standard_response(
+                title=title,
+                total_cost=total_cost,
+                cost_details=cost_details,
+                included_items=included_items,
+                notes=notes
+            )
+            
+            return {
+                "response": response,
+                "agent_used": self.agent_name,
+                "total_cost": total_cost,
+                "num_doors": num_items,
+                "cost_per_door": unit_price,
+                "pricing_source": "database" if "error" not in result else "fallback"
+            }
+            
+        except Exception as e:
+            return await self._windows_doors_fallback(f"innerdører {num_items} stk", num_items * 3000)
         
     async def _calculate_roof_windows(self, query_lower: str):
         return await self._windows_doors_fallback("takvindu", 35000)
