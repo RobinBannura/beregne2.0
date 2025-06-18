@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Beregne 2.0 API",
     description="AI-Powered Calculator Platform for Norway",
-    version="2.0.3",  # Fix pricing data initialization with correct foreign keys
+    version="2.0.4",  # Add admin endpoint to manually initialize bathroom pricing
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -286,6 +286,75 @@ async def fix_agent_config(db: Session = Depends(get_db)):
             return {"status": "error", "message": "househacker partner not found"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.post("/api/admin/initialize-bathroom-pricing")
+async def initialize_bathroom_pricing(db: Session = Depends(get_db)):
+    """Manually initialize bathroom pricing data"""
+    try:
+        from .models.pricing import ServiceType, PricingData
+        
+        # Create bathroom service types
+        bathroom_services = [
+            {"name": "bad_totalrenovering_4m2", "description": "Totalrenovering 4m² bad", "unit": "stk", "category": "bad_komplett"},
+            {"name": "bad_totalrenovering_8m2", "description": "Totalrenovering 8m² bad", "unit": "stk", "category": "bad_komplett"},
+            {"name": "bad_totalrenovering_12m2", "description": "Totalrenovering 12m² bad", "unit": "stk", "category": "bad_komplett"}
+        ]
+        
+        services_added = 0
+        for service_data in bathroom_services:
+            existing = db.query(ServiceType).filter(ServiceType.name == service_data["name"]).first()
+            if not existing:
+                service = ServiceType(**service_data)
+                db.add(service)
+                services_added += 1
+        
+        db.commit()
+        
+        # Create bathroom pricing data
+        bathroom_prices = [
+            {"service_name": "bad_totalrenovering_4m2", "region": "Oslo", "min_price": 280000, "max_price": 360000},
+            {"service_name": "bad_totalrenovering_8m2", "region": "Oslo", "min_price": 340000, "max_price": 440000},
+            {"service_name": "bad_totalrenovering_12m2", "region": "Oslo", "min_price": 400000, "max_price": 520000}
+        ]
+        
+        prices_added = 0
+        for price_data in bathroom_prices:
+            service_type = db.query(ServiceType).filter(ServiceType.name == price_data["service_name"]).first()
+            if service_type:
+                existing_price = db.query(PricingData).filter(
+                    PricingData.service_type_id == service_type.id,
+                    PricingData.source == "admin_initialization"
+                ).first()
+                
+                if not existing_price:
+                    price = PricingData(
+                        service_type_id=service_type.id,
+                        region=price_data["region"],
+                        min_price=price_data["min_price"],
+                        max_price=price_data["max_price"],
+                        avg_price=(price_data["min_price"] + price_data["max_price"]) / 2,
+                        source="admin_initialization",
+                        confidence=0.9
+                    )
+                    db.add(price)
+                    prices_added += 1
+        
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": "Bathroom pricing initialized",
+            "services_added": services_added,
+            "prices_added": prices_added
+        }
+        
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error", 
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
 
 @app.get("/api/debug/database")
 async def debug_database(db: Session = Depends(get_db)):
