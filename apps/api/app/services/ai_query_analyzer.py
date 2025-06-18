@@ -71,15 +71,15 @@ class AIQueryAnalyzer:
                         return self._validate_and_enhance_analysis(analysis, query)
                     except json.JSONDecodeError:
                         # Fallback to regex if AI response is invalid
-                        return self._fallback_regex_analysis(query)
+                        return self._fallback_regex_analysis(query, context)
                 else:
                     # Fallback to regex if API fails
-                    return self._fallback_regex_analysis(query)
+                    return self._fallback_regex_analysis(query, context)
                     
         except Exception as e:
             print(f"AI analysis failed: {e}")
             # Fallback to regex analysis
-            return self._fallback_regex_analysis(query)
+            return self._fallback_regex_analysis(query, context)
     
     def _build_analysis_prompt(self, query: str, context: str) -> str:
         """Build prompt for AI analysis"""
@@ -88,6 +88,8 @@ class AIQueryAnalyzer:
 
 Query: "{query}"
 {f"Context: {context}" if context else ""}
+
+IMPORTANT: If context shows we're discussing a specific project type (e.g., Project: bad), and the query contains size/quality details (e.g., "5 kvm", "standard", "normal"), treat this as a response about that project type.
 
 Determine:
 1. Project type (bad_komplett, kjøkken_detaljert, maling, elektriker_arbeid, gulvarbeider, vinduer_dorer, tomrer_bygg, tak_ytterkledning, isolasjon_tetting, grunnarbeider)
@@ -117,6 +119,7 @@ Examples:
 - "bytte 5 dører" → type: "needs_clarification", is_ambiguous: true, missing_info: ["door_type", "interior_or_exterior"]
 - "pusse opp bad 6 kvm" → type: "full_project_estimate", project_type: "bad_komplett", area: 6, room_type: "bad"
 - "parkett hele leiligheten" → type: "flooring_work", project_type: "gulvarbeider", missing_info: ["total_area"]
+- With context "Project: bad" and query "Normal standard og 5 kvm" → type: "full_project_estimate", project_type: "bad_komplett", area: 5, preferences: {{"quality": "mid"}}
 """
         
         return prompt
@@ -183,14 +186,24 @@ Examples:
         
         return "needs_clarification"
     
-    def _fallback_regex_analysis(self, query: str) -> Dict[str, Any]:
+    def _fallback_regex_analysis(self, query: str, context: str = "") -> Dict[str, Any]:
         """Fallback regex-based analysis when AI fails"""
         query_lower = query.lower()
+        
+        # Check if context indicates we're discussing a specific project type
+        context_project_type = None
+        if context:
+            if "Project: bad" in context:
+                context_project_type = "bad_komplett"
+            elif "Project: kjøkken" in context:
+                context_project_type = "kjøkken_detaljert"
+            elif "Project: maling" in context:
+                context_project_type = "maling"
         
         # Enhanced regex analysis for common queries
         analysis = {
             "type": "needs_clarification",
-            "project_type": self._guess_project_type_from_query(query),
+            "project_type": context_project_type or self._guess_project_type_from_query(query),
             "area": None,
             "quantity": None,
             "room_type": None,
@@ -202,6 +215,20 @@ Examples:
             "reasoning": "Fallback regex analysis due to AI failure",
             "needs_clarification": True
         }
+        
+        # Special handling for contextual responses
+        if context_project_type and any(word in query_lower for word in ['standard', 'kvalitet', 'høy', 'enkel', 'normal']):
+            # This looks like a response to a previous question about a project
+            has_area = bool(re.search(r'\d+(?:\.\d+)?', query_lower))  # Any number could be area
+            if has_area:
+                analysis.update({
+                    "type": "full_project_estimate",
+                    "project_type": context_project_type,
+                    "is_ambiguous": False,
+                    "needs_clarification": False,
+                    "confidence": 0.9,
+                    "reasoning": "Contextual response with size and quality details"
+                })
         
         # Better detection for clear queries
         project_type = analysis["project_type"]
