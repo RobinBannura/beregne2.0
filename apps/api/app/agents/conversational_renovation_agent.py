@@ -158,49 +158,28 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
     ) -> Dict[str, Any]:
         """Wrap technical clarification in conversational tone"""
         
-        # Get the original technical response
-        original_response = technical_result.get("response", "")
-        
-        # Add conversational introduction
-        intro_phrases = [
-            "Det høres ut som et spennende prosjekt! 😊",
-            "Flott at du tenker på oppussing!",
-            "Jeg skjønner hva du er ute etter!",
-            "Det er et populært prosjekt akkurat nå!"
-        ]
-        
-        # Choose intro based on query
+        # Create a simple, natural response
         if "bad" in query.lower():
-            intro = "Badrenovering er alltid en god investering! 🛁"
+            intro = "Badrenovering er en god investering! 😊"
         elif "kjøkken" in query.lower():
-            intro = "Kjøkken er hjertet i hjemmet - smart å oppgradere! 👨‍🍳"
-        elif "dør" in query.lower():
-            intro = "Nye dører kan virkelig friske opp hjemmet! 🚪"
+            intro = "Kjøkken er hjertet i hjemmet."
         else:
-            intro = intro_phrases[0]
+            intro = "Det høres ut som et spennende prosjekt!"
         
-        # Add seasonal context if relevant
-        seasonal_advice = self._get_seasonal_context(project_type)
+        # Get clarification details from technical result
+        clarification_details = technical_result.get("clarification_details", {})
+        questions = clarification_details.get("questions", [])
         
-        # Rebuild response with conversational wrapper
-        conversational_response = f"""
-<div style="background: {self.LIGHT_BG}; padding: 24px; border-radius: 8px; margin: 16px 0; border-left: 3px solid {self.BRAND_COLOR};">
-    <div style="margin-bottom: 16px;">
-        <p style="color: #374151; font-size: 16px; margin-bottom: 8px;">
-            {intro}
-        </p>
-        {f'<p style="color: {self.TEXT_GRAY}; font-size: 14px; margin-bottom: 16px;">{seasonal_advice}</p>' if seasonal_advice else ''}
-    </div>
-    
-    {original_response.replace('<div style="background: #f9fafb;', '<div style="background: #ffffff;')}
-    
-    <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin-top: 16px; border-left: 2px solid {self.BRAND_COLOR};">
-        <p style="color: #374151; font-size: 14px; margin: 0;">
-            💡 <strong>Tips:</strong> Når vi har fått avklart detaljene kan jeg hjelpe deg med å finne kvalitetssikrede entreprenører i ditt område!
-        </p>
-    </div>
-</div>
-"""
+        # Create simple conversational response
+        response_parts = [intro]
+        
+        if questions:
+            response_parts.append("For å gi deg et godt prisestimat trenger jeg å vite:")
+            response_parts.extend([f"- {q}" for q in questions])
+        else:
+            response_parts.append("Kan du fortelle meg litt mer om prosjektet?")
+        
+        conversational_response = " ".join(response_parts)
         
         return {
             **technical_result,
@@ -218,65 +197,25 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         """Wrap pricing result in conversational response"""
         
         total_cost = technical_result.get("total_cost", 0)
-        original_response = technical_result.get("response", "")
         
-        # Conversational introduction based on price range
-        if total_cost < 50000:
-            price_context = "Det er et rimelig til middels prosjekt"
-        elif total_cost < 150000:
-            price_context = "Det er et solid prosjekt med god verdi"
-        elif total_cost < 300000:
-            price_context = "Det er et større prosjekt som kan gi mye verdi til hjemmet"
+        # Create simple conversational response
+        if total_cost > 0:
+            response = f"Et slikt prosjekt koster typisk rundt {total_cost:,.0f} kr i Oslo-området. "
+            
+            if total_cost < 100000:
+                response += "Det er en fin investering som gir mye verdi. "
+            elif total_cost < 300000:
+                response += "Det er et solid prosjekt som kan transformere hjemmet ditt. "
+            else:
+                response += "Det er et omfattende prosjekt, men resultatet blir fantastisk. "
+            
+            response += "Vil du at jeg hjelper deg å finne 2-3 gode entreprenører som kan gi deg tilbud?"
         else:
-            price_context = "Det er et omfattende prosjekt som virkelig kan transformere hjemmet ditt"
-        
-        # Add expertise and tips
-        expert_tips = self._get_expert_tips(project_type, total_cost)
-        seasonal_advice = self._get_seasonal_context(project_type)
-        
-        # Build conversational response
-        conversational_response = f"""
-<div style="background: {self.LIGHT_BG}; padding: 24px; border-radius: 8px; margin: 16px 0;">
-    <div style="margin-bottom: 20px;">
-        <p style="color: #374151; font-size: 16px; margin-bottom: 12px;">
-            Her er et realistisk prisestimat basert på dagens markedspriser i Oslo/Viken-området: 📊
-        </p>
-    </div>
-    
-    {original_response}
-    
-    <div style="background: {self.WHITE_BG}; padding: 20px; border-radius: 6px; margin: 16px 0; border-left: 3px solid {self.BRAND_COLOR};">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">💡 Mine råd som fagperson:</h3>
-        
-        <p style="color: #374151; font-size: 14px; margin-bottom: 12px;">
-            <strong>{price_context}.</strong> {expert_tips}
-        </p>
-        
-        {f'<p style="color: {self.TEXT_GRAY}; font-size: 14px; margin-bottom: 12px;">{seasonal_advice}</p>' if seasonal_advice else ''}
-        
-        <p style="color: #374151; font-size: 14px; margin: 0;">
-            Prisene kan variere ±15-20% avhengig av kvalitet, tilgjengelighet og spesielle ønsker. 
-            Vil du at jeg hjelper deg med å finne 2-3 kvalitetssikrede entreprenører som kan gi deg konkrete tilbud? 🤝
-        </p>
-    </div>
-    
-    <div style="text-align: center; margin-top: 20px;">
-        <button onclick="askQuestion('Ja, jeg vil gjerne ha hjelp til å finne entreprenører')" 
-                style="background: {self.BRAND_COLOR}; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; margin-right: 8px;">
-            Finn entreprenører
-        </button>
-        
-        <button onclick="askQuestion('Kan du fortelle mer om prosessen?')" 
-                style="background: transparent; color: {self.BRAND_COLOR}; border: 1px solid {self.BRAND_COLOR}; padding: 11px 23px; border-radius: 6px; font-size: 14px; cursor: pointer;">
-            Fortell mer
-        </button>
-    </div>
-</div>
-"""
+            response = "For å gi deg et godt prisanslag trenger jeg litt mer informasjon om prosjektet."
         
         return {
             **technical_result,
-            "response": conversational_response,
+            "response": response,
             "conversation_stage": "registration_offer",
             "personality_applied": True,
             "next_action": "offer_registration"
@@ -307,34 +246,7 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         """Create a general conversational response for unclear queries"""
         
         return {
-            "response": f"""
-<div style="background: {self.LIGHT_BG}; padding: 24px; border-radius: 8px; margin: 16px 0;">
-    <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Hei! Hyggelig å høre fra deg! 👋</h2>
-    
-    <p style="color: #374151; font-size: 16px; margin-bottom: 16px;">
-        Jeg er din househacker-assistent og brenner for å hjelpe folk med oppussingsprosjekter. 
-        Med over 15 års erfaring fra byggebransjen kan jeg hjelpe deg med både prisanslag og å finne 
-        riktige entreprenører.
-    </p>
-    
-    <div style="background: {self.WHITE_BG}; padding: 20px; border-radius: 6px; margin: 16px 0;">
-        <h3 style="color: #374151; margin-bottom: 12px; font-size: 16px;">Hva tenker du på? 🤔</h3>
-        <p style="color: #374151; font-size: 14px; margin-bottom: 16px;">
-            Jeg kan hjelpe deg med:
-        </p>
-        <ul style="color: #374151; font-size: 14px; margin: 0; padding-left: 20px;">
-            <li>Realistiske kostnadsestimater</li>
-            <li>Faglige råd og tips</li>
-            <li>Kobling med kvalitetssikrede entreprenører</li>
-            <li>Veiledning gjennom hele prosessen</li>
-        </ul>
-    </div>
-    
-    <p style="color: {self.TEXT_GRAY}; font-size: 14px; margin-top: 16px;">
-        Bare fortell meg hva du har lyst til å gjøre - jeg gir deg en ærlig vurdering! 😊
-    </p>
-</div>
-""",
+            "response": "Hei! Jeg er househacker-assistenten din og brenner for oppussing. Har du et prosjekt du tenker på? Jeg kan hjelpe deg med både prisanslag og å finne gode entreprenører. Bare fortell meg hva du har lyst til å gjøre! 😊",
             "agent_used": self.agent_name,
             "conversation_stage": "greeting",
             "personality_applied": True,
