@@ -48,7 +48,8 @@ class IntelligentAIService:
         user_query: str, 
         project_type: str = None,
         conversation_history: List[Dict] = None,
-        missing_info: List[str] = None
+        missing_info: List[str] = None,
+        learning_service = None
     ) -> Dict[str, Any]:
         """
         Generate intelligent follow-up questions based on user query and context
@@ -57,6 +58,16 @@ class IntelligentAIService:
         try:
             # Build context for the AI
             system_prompt = self._build_system_prompt(project_type)
+            
+            # Add learned patterns if learning service available
+            if learning_service and project_type:
+                try:
+                    learned_prompt = await learning_service.get_improved_ai_prompt(project_type)
+                    if learned_prompt:
+                        system_prompt += learned_prompt
+                except Exception as e:
+                    print(f"Failed to get learned patterns: {e}")
+            
             user_context = self._build_user_context(user_query, conversation_history, missing_info)
             
             # Call OpenAI

@@ -4,6 +4,7 @@ from datetime import datetime
 from .enhanced_renovation_agent import EnhancedRenovationAgent
 from ..services.project_registration_service import ProjectRegistrationService, RegistrationStage
 from ..services.intelligent_ai_service import IntelligentAIService
+from ..services.conversation_learning_service import ConversationLearningService
 
 class ConversationalRenovationAgent(EnhancedRenovationAgent):
     """
@@ -27,6 +28,13 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         except Exception as e:
             print(f"Intelligent AI service initialization failed: {e}")
             self.intelligent_ai = None
+        
+        # Initialize conversation learning service
+        try:
+            self.learning_service = ConversationLearningService(db=self.db)
+        except Exception as e:
+            print(f"Learning service initialization failed: {e}")
+            self.learning_service = None
         
         # Conversation state tracking
         self.conversation_stages = [
@@ -89,28 +97,58 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         return season_advice.get(project_type, season_advice.get("default", ""))
     
     async def process(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Process query with conversational approach"""
+        """Process query with conversational approach and learning"""
+        
+        # Extract session info for logging
+        session = context.get("session") if context else None
+        session_id = getattr(session, 'session_id', None) if session else context.get("session_id", "unknown")
+        partner_id = context.get("partner_id", "unknown") if context else "unknown"
+        
+        # Start conversation logging
+        if self.learning_service and session_id != "unknown":
+            try:
+                await self.learning_service.log_conversation_start(
+                    session_id=session_id,
+                    partner_id=partner_id,
+                    agent_used=self.agent_name
+                )
+            except Exception as e:
+                print(f"Failed to log conversation start: {e}")
         
         # Check if we're in registration mode
-        session = context.get("session") if context else None
         registration_stage = self._get_registration_stage(session)
         
         if registration_stage and registration_stage != RegistrationStage.COMPLETED:
-            return await self._handle_registration_flow(query, context, registration_stage)
+            result = await self._handle_registration_flow(query, context, registration_stage)
+        elif self._wants_to_register(query):
+            result = await self._start_registration_flow(query, context)
+        else:
+            # First, get the technical analysis and pricing from parent class
+            technical_result = await super().process(query, context)
+            
+            # Then wrap it in conversational response
+            result = await self._create_conversational_response(
+                query, technical_result, context
+            )
         
-        # Check if user wants to start registration
-        if self._wants_to_register(query):
-            return await self._start_registration_flow(query, context)
+        # Log the complete message exchange
+        if self.learning_service and session_id != "unknown":
+            try:
+                await self.learning_service.log_message_exchange(
+                    session_id=session_id,
+                    user_message=query,
+                    agent_response=result.get("response", ""),
+                    ai_powered=result.get("ai_powered", False),
+                    ai_reasoning=result.get("ai_reasoning", ""),
+                    project_type_detected=result.get("calculation_details", {}).get("project_type", ""),
+                    missing_info=result.get("missing_info", []),
+                    led_to_pricing=result.get("total_cost", 0) > 0,
+                    led_to_registration=result.get("registration_stage") is not None
+                )
+            except Exception as e:
+                print(f"Failed to log message exchange: {e}")
         
-        # First, get the technical analysis and pricing from parent class
-        technical_result = await super().process(query, context)
-        
-        # Then wrap it in conversational response
-        conversational_result = await self._create_conversational_response(
-            query, technical_result, context
-        )
-        
-        return conversational_result
+        return result
     
     async def _create_conversational_response(
         self, 
@@ -182,7 +220,8 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
                 ai_response = await self.intelligent_ai.generate_intelligent_followup(
                     user_query=query,
                     project_type=project_type,
-                    missing_info=technical_result.get("missing_info", [])
+                    missing_info=technical_result.get("missing_info", []),
+                    learning_service=self.learning_service
                 )
                 
                 if ai_response.get("success"):
