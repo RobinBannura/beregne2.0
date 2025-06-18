@@ -75,9 +75,14 @@ async def startup_event():
     try:
         create_tables()
         
-        # Ensure conversation learning tables exist
-        from .models.conversation import ConversationSession, ConversationMessage, ConversationPattern, Base
-        Base.metadata.create_all(bind=SessionLocal().bind)
+        # Ensure all model tables exist
+        from .models.conversation import ConversationSession, ConversationMessage, ConversationPattern
+        from .models.conversation import Base as ConversationBase
+        from .models.pricing import ServiceType, PricingData, Contractor
+        from .models.pricing import Base as PricingBase
+        
+        ConversationBase.metadata.create_all(bind=SessionLocal().bind)
+        PricingBase.metadata.create_all(bind=SessionLocal().bind)
         
         # Initialize pricing data if missing
         try:
