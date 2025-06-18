@@ -78,6 +78,10 @@ class AIQueryAnalyzer:
                     
         except Exception as e:
             print(f"AI analysis failed: {e}")
+            print(f"Query: {query}")
+            print(f"Context: {context}")
+            import traceback
+            traceback.print_exc()
             # Fallback to regex analysis
             return self._fallback_regex_analysis(query, context)
     
@@ -188,6 +192,7 @@ Examples:
     
     def _fallback_regex_analysis(self, query: str, context: str = "") -> Dict[str, Any]:
         """Fallback regex-based analysis when AI fails"""
+        print(f"Using fallback regex analysis for query: {query}")
         query_lower = query.lower()
         
         # Check if context indicates we're discussing a specific project type
@@ -217,7 +222,27 @@ Examples:
         }
         
         # Special handling for contextual responses
-        if context_project_type and any(word in query_lower for word in ['standard', 'kvalitet', 'høy', 'enkel', 'normal']):
+        # If we have quality + small area (likely bathroom), assume bathroom project even without context
+        has_quality = any(word in query_lower for word in ['standard', 'kvalitet', 'høy', 'enkel', 'normal'])
+        has_small_area = bool(re.search(r'[1-9](?:[0-9])?(?:\.\d+)?\s*(?:m²|m2|kvadratmeter|kvm)', query_lower))  # 1-99 m²
+        
+        if has_quality and has_small_area:
+            area_match = re.search(r'([1-9](?:[0-9])?(?:\.\d+)?)\s*(?:m²|m2|kvadratmeter|kvm)', query_lower)
+            if area_match:
+                area_value = float(area_match.group(1))
+                # Small areas with quality indicators are most likely bathrooms
+                if area_value <= 15:  # Bathrooms are typically ≤15m²
+                    analysis.update({
+                        "type": "full_project_estimate",
+                        "project_type": "bad_komplett",
+                        "is_ambiguous": False,
+                        "needs_clarification": False,
+                        "confidence": 0.85,
+                        "reasoning": "Small area with quality details strongly suggests bathroom project"
+                    })
+        
+        # Original contextual handling
+        elif context_project_type and has_quality:
             # This looks like a response to a previous question about a project
             has_area = bool(re.search(r'\d+(?:\.\d+)?', query_lower))  # Any number could be area
             if has_area:
