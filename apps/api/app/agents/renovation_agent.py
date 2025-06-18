@@ -93,6 +93,9 @@ class RenovationAgent(BaseAgent):
                 result = await self._estimate_prices(analysis, query)
             elif analysis["type"] == "room_renovation":
                 result = await self._calculate_room_renovation(analysis, query)
+            elif analysis["type"] == "contextual_renovation":
+                # Handle contextual responses like "standard kvalitet og 5 kvm"
+                result = await self._calculate_room_renovation(analysis, query)
             else:
                 result = await self._general_renovation_advice(query)
             
@@ -116,7 +119,7 @@ class RenovationAgent(BaseAgent):
         query_lower = query.lower()
         
         # Ekstraherer tall og enheter
-        area_match = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:m2|m²|kvadratmeter)', query_lower)
+        area_match = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:m2|m²|kvadratmeter|kvm)', query_lower)
         area = float(area_match.group(1).replace(',', '.')) if area_match else None
         
         room_match = re.search(r'(bad|kjøkken|stue|soverom|gang|entre)', query_lower)
@@ -128,6 +131,12 @@ class RenovationAgent(BaseAgent):
             if material in query_lower:
                 materials.append(material)
         
+        # Smart detection for contextual responses
+        # If we have area + quality indicators but no explicit room type,
+        # this is likely a contextual response to a previous room question
+        has_quality_indicators = any(word in query_lower for word in ['standard', 'kvalitet', 'normal', 'høy', 'enkel', 'premium'])
+        is_contextual_response = area and has_quality_indicators and not room_type
+        
         # Bestem type spørring
         if any(word in query_lower for word in ['mengde', 'antall', 'materiale', 'materialer']) or \
            ('hvor mye' in query_lower and any(mat in query_lower for mat in ['maling', 'fliser', 'laminat', 'gips'])):
@@ -136,6 +145,11 @@ class RenovationAgent(BaseAgent):
             query_type = "price_estimation"
         elif room_type:
             query_type = "room_renovation"
+        elif is_contextual_response:
+            # Treat contextual responses with area+quality as renovation requests
+            query_type = "contextual_renovation"
+            # Default to bathroom for contextual responses (most common)
+            room_type = "bad"
         else:
             query_type = "general"
         
@@ -144,7 +158,8 @@ class RenovationAgent(BaseAgent):
             "area": area,
             "room_type": room_type,
             "materials": materials,
-            "original_query": query
+            "original_query": query,
+            "is_contextual": is_contextual_response
         }
 
     async def _calculate_materials(self, analysis: Dict, query: str) -> Dict[str, Any]:

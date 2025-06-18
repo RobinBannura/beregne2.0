@@ -198,7 +198,7 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
         return query
     
     async def _handle_contextual_response(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Handle contextual responses using AI analysis and session memory"""
+        """Handle contextual responses using AI analysis and pricing service"""
         try:
             # Use AI analyzer to understand the query
             if self.ai_analyzer:
@@ -210,12 +210,53 @@ class ConversationalRenovationAgent(EnhancedRenovationAgent):
                 if project_type and area:
                     print(f"AI detected contextual response: {project_type}, {area}m²")
                     
-                    # Try to get pricing for detected project
+                    # Try to get pricing for detected project using pricing service
                     if hasattr(self, 'pricing_service') and self.pricing_service:
+                        try:
+                            # For bathroom renovation, try to get direct pricing
+                            if project_type == "bad_komplett":
+                                # Find closest bathroom service
+                                service_name = None
+                                if area <= 6:
+                                    service_name = "bad_totalrenovering_4m2"
+                                elif area <= 10:
+                                    service_name = "bad_totalrenovering_8m2"
+                                else:
+                                    service_name = "bad_totalrenovering_12m2"
+                                
+                                pricing_result = self.pricing_service.get_service_price(service_name)
+                                
+                                if pricing_result and "error" not in pricing_result:
+                                    unit_price = pricing_result.get("unit_price", {})
+                                    avg_price = unit_price.get("market_avg", 0)
+                                    
+                                    if avg_price > 0:
+                                        # Add 25% VAT
+                                        price_with_vat = avg_price * 1.25
+                                        
+                                        return {
+                                            "response": f"Basert på {area}m² bad med standard kvalitet",
+                                            "requires_clarification": False,
+                                            "total_cost": price_with_vat,
+                                            "calculation_details": {
+                                                "project_type": project_type,
+                                                "area": area,
+                                                "quality_level": "standard",
+                                                "service_used": service_name,
+                                                "price_ex_vat": avg_price,
+                                                "price_inc_vat": price_with_vat
+                                            },
+                                            "agent_used": self.agent_name,
+                                            "contextual_processing": True
+                                        }
+                        except Exception as e:
+                            print(f"Error getting pricing: {e}")
+                            
+                        # Fallback to general pricing calculation
                         pricing_result = self.pricing_service.calculate_renovation_cost(
                             project_type=project_type,
                             area=area,
-                            quality_level="standard"  # Default for contextual responses
+                            quality_level="standard"
                         )
                         
                         if pricing_result and pricing_result.get("total_cost", 0) > 0:
