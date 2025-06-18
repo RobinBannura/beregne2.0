@@ -223,6 +223,51 @@ async def fix_agent_config(db: Session = Depends(get_db)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/api/debug/database")
+async def debug_database(db: Session = Depends(get_db)):
+    """Debug database and pricing service functionality"""
+    try:
+        from .services.pricing_service import PricingService
+        from .services.ai_query_analyzer import AIQueryAnalyzer
+        import os
+        
+        pricing_service = PricingService(db)
+        ai_analyzer = AIQueryAnalyzer(agent_name="renovation")
+        
+        # Test pricing service
+        bathroom_price = pricing_service.get_service_price("bad_totalrenovering_8m2")
+        
+        # Test AI analyzer
+        test_analysis = await ai_analyzer.analyze_query("standard kvalitet og 5 kvm")
+        
+        return {
+            "status": "success",
+            "database_connected": True,
+            "pricing_service": {
+                "bathroom_8m2_price": bathroom_price,
+                "working": "error" not in bathroom_price
+            },
+            "ai_analyzer": {
+                "api_key_available": ai_analyzer.api_key is not None,
+                "test_analysis": {
+                    "project_type": test_analysis.get("project_type"),
+                    "area": test_analysis.get("area"),
+                    "type": test_analysis.get("type")
+                }
+            },
+            "environment": {
+                "database_url": os.getenv("DATABASE_URL", "Not set")[:20] + "...",
+                "openai_key_available": bool(os.getenv("OPENAI_API_KEY_RENOVATION"))
+            }
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
 if __name__ == "__main__":
     import os
     port = int(os.getenv("PORT", 8000))
