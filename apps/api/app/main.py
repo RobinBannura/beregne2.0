@@ -287,7 +287,7 @@ async def debug_database(db: Session = Depends(get_db)):
         existing_tables = [row[0] for row in tables_result.fetchall()]
         
         # Only test pricing service if tables exist
-        if "service_types" in existing_tables and "prices" in existing_tables:
+        if "service_types" in existing_tables and "pricing_data" in existing_tables:
             pricing_service = PricingService(db)
             try:
                 bathroom_price = pricing_service.get_service_price("bad_totalrenovering_8m2")
